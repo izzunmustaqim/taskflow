@@ -79,7 +79,7 @@ const isOverdue = (dateString: string | null, status: string) => {
             </div>
             
             <!-- Actions slot for Trash view -->
-            <div v-if="isTrash" class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/50 flex justify-end z-20 relative">
+            <div v-if="isTrash" class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/50 flex flex-wrap justify-end gap-2 z-20 relative">
                  <slot name="actions"></slot>
             </div>
         </div>

@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps<{
     status: string;
+    animate?: boolean;
 }>();
+
+const isAnimating = ref(false);
+const previousStatus = ref(props.status);
 
 const config = computed(() => {
     switch (props.status) {
@@ -33,14 +37,60 @@ const config = computed(() => {
             };
     }
 });
+
+// Animate when status changes
+watch(() => props.status, (newStatus, oldStatus) => {
+    if (newStatus !== oldStatus && props.animate !== false) {
+        isAnimating.value = true;
+        setTimeout(() => {
+            isAnimating.value = false;
+        }, 600);
+    }
+});
 </script>
 
 <template>
-    <span :class="[
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset shadow-sm transition-colors',
-        config.classes
-    ]">
-        <span class="w-1.5 h-1.5 rounded-full" :class="config.dot"></span>
+    <span
+        :class="[
+            'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset shadow-sm transition-all duration-300',
+            config.classes,
+            { 'animate-pulse-status': isAnimating }
+        ]"
+    >
+        <span
+            class="w-1.5 h-1.5 rounded-full transition-colors duration-300"
+            :class="[config.dot, { 'animate-dot-pulse': isAnimating }]"
+        ></span>
         {{ config.label }}
     </span>
 </template>
+
+<style scoped>
+@keyframes pulse-status {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+    }
+    50% {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0);
+    }
+}
+
+@keyframes dot-pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.5);
+    }
+}
+
+.animate-pulse-status {
+    animation: pulse-status 0.6s ease-in-out;
+}
+
+.animate-dot-pulse {
+    animation: dot-pulse 0.6s ease-in-out;
+}
+</style>

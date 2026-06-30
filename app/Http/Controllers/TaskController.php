@@ -85,6 +85,7 @@ final class TaskController extends Controller
             'categories' => $this->categoryService->list($user),
             'statuses' => TaskStatus::options(),
             'priorities' => TaskPriority::options(),
+            'activityLog' => $this->taskService->getActivityLog($task),
         ]);
     }
 

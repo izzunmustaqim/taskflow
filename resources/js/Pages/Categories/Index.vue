@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import ConfirmModal from '@/Components/ConfirmModal.vue';
+import EmptyState from '@/Components/EmptyState.vue';
 import { ref } from 'vue';
 
 defineProps<{
@@ -52,15 +53,15 @@ const executeDelete = () => {
 
         <div class="py-8">
             <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
-                
-                <div v-if="categories.length === 0" class="text-center py-16 bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl border border-dashed border-gray-300 dark:border-gray-700 rounded-3xl">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mx-auto h-16 w-16 text-gray-400">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6z" />
-                    </svg>
-                    <h3 class="mt-4 text-lg font-semibold text-gray-900 dark:text-white">No categories found</h3>
-                    <p class="mt-1 text-gray-500 dark:text-gray-400">Create categories to organize your tasks.</p>
-                </div>
+
+                <EmptyState
+                    v-if="categories.length === 0"
+                    icon="categories"
+                    title="No categories yet"
+                    description="Create categories to organize your tasks and keep them tidy."
+                    action-text="Create Category"
+                    :action-href="route('categories.create')"
+                />
 
                 <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div v-for="category in categories" :key="category.id" class="group relative overflow-hidden bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-gray-100 dark:border-gray-700 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1">

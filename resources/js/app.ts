@@ -8,6 +8,16 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+// Initialize dark mode before app mounts to prevent flash
+const initializeDarkMode = () => {
+    const stored = localStorage.getItem('darkMode');
+    if (stored === 'true' || (stored === null && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+    }
+};
+
+initializeDarkMode();
+
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) =>

@@ -1,14 +1,56 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import FlashMessage from '@/Components/FlashMessage.vue';
+import LoadingBar from '@/Components/LoadingBar.vue';
+import KeyboardShortcutsHelp from '@/Components/KeyboardShortcutsHelp.vue';
+import DarkModeToggle from '@/Components/DarkModeToggle.vue';
+import { useKeyboardShortcuts } from '@/Composables/useKeyboardShortcuts';
+import { useDarkMode } from '@/Composables/useDarkMode';
 
 const showingNavigationDropdown = ref(false);
+const { register } = useKeyboardShortcuts();
+const { toggle: toggleDarkMode } = useDarkMode();
+
+// Register global shortcuts
+register({
+    key: 'd',
+    description: 'Go to Dashboard',
+    handler: () => router.visit(route('dashboard')),
+});
+
+register({
+    key: 't',
+    description: 'Go to Tasks',
+    handler: () => router.visit(route('tasks.index')),
+});
+
+register({
+    key: 'c',
+    description: 'Go to Categories',
+    handler: () => router.visit(route('categories.index')),
+});
+
+register({
+    key: 'n',
+    ctrl: true,
+    description: 'Create new task',
+    handler: () => router.visit(route('tasks.create')),
+});
+
+register({
+    key: 'b',
+    shift: true,
+    description: 'Toggle dark mode',
+    handler: toggleDarkMode,
+});
 </script>
 
 <template>
     <div class="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+        <LoadingBar />
         <FlashMessage />
+        <KeyboardShortcutsHelp />
         
         <nav class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-b border-gray-100 dark:border-gray-700 sticky top-0 z-40 transition-colors duration-200">
             <!-- Primary Navigation Menu -->
@@ -42,6 +84,9 @@ const showingNavigationDropdown = ref(false);
                     </div>
 
                     <div class="hidden sm:flex sm:items-center sm:ms-6">
+                        <!-- Dark Mode Toggle -->
+                        <DarkModeToggle />
+
                         <!-- Settings Dropdown -->
                         <div class="ms-3 relative group">
                             <div class="flex items-center gap-3 px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-full text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150 shadow-sm ring-1 ring-gray-900/5 dark:ring-white/10">
@@ -88,6 +133,12 @@ const showingNavigationDropdown = ref(false);
                     </div>
 
                     <div class="mt-3 space-y-1">
+                        <!-- Dark Mode Toggle for Mobile -->
+                        <div class="flex items-center justify-between ps-3 pe-4 py-2">
+                            <span class="text-base font-medium text-gray-600 dark:text-gray-400">Dark Mode</span>
+                            <DarkModeToggle />
+                        </div>
+
                         <Link :href="route('logout')" method="post" as="button" class="block w-full ps-3 pe-4 py-2 border-l-4 border-transparent text-start text-base font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition duration-150 ease-in-out">
                             Log Out
                         </Link>

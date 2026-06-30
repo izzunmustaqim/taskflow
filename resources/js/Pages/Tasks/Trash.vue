@@ -4,6 +4,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import TaskCard from '@/Components/TaskCard.vue';
 import Pagination from '@/Components/Pagination.vue';
 import ConfirmModal from '@/Components/ConfirmModal.vue';
+import LoadingSpinner from '@/Components/LoadingSpinner.vue';
+import EmptyState from '@/Components/EmptyState.vue';
 import { ref } from 'vue';
 
 defineProps<{
@@ -15,6 +17,7 @@ defineProps<{
 
 const showForceDeleteModal = ref(false);
 const taskToForceDelete = ref<number | null>(null);
+const restoringId = ref<number | null>(null);
 
 const confirmForceDelete = (id: number) => {
     taskToForceDelete.value = id;
@@ -24,7 +27,10 @@ const confirmForceDelete = (id: number) => {
 const executeForceDelete = () => {
     if (taskToForceDelete.value) {
         router.delete(route('tasks.force-destroy', taskToForceDelete.value), {
-            onSuccess: () => {
+            onStart: () => {
+                showForceDeleteModal.value = true;
+            },
+            onFinish: () => {
                 showForceDeleteModal.value = false;
                 taskToForceDelete.value = null;
             },
@@ -33,7 +39,12 @@ const executeForceDelete = () => {
 };
 
 const restoreTask = (id: number) => {
-    router.post(route('tasks.restore', id));
+    restoringId.value = id;
+    router.post(route('tasks.restore', id), {}, {
+        onFinish: () => {
+            restoringId.value = null;
+        },
+    });
 };
 </script>
 
@@ -54,22 +65,24 @@ const restoreTask = (id: number) => {
 
         <div class="py-8">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                
-                <div v-if="tasks.data.length === 0" class="text-center py-16 bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl border border-dashed border-gray-300 dark:border-gray-700 rounded-3xl">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="mx-auto h-16 w-16 text-gray-400">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                    </svg>
-                    <h3 class="mt-4 text-lg font-semibold text-gray-900 dark:text-white">Trash is empty</h3>
-                    <p class="mt-1 text-gray-500 dark:text-gray-400">No deleted tasks found.</p>
-                </div>
+
+                <EmptyState
+                    v-if="tasks.data.length === 0"
+                    icon="trash"
+                    title="Trash is empty"
+                    description="Deleted tasks will appear here. You can restore them or delete them permanently."
+                    action-text="Back to Tasks"
+                    :action-href="route('tasks.index')"
+                />
 
                 <div v-else class="space-y-6">
                     <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                         <TaskCard v-for="task in tasks.data" :key="task.id" :task="task" isTrash>
                             <template #actions>
                                 <div class="flex gap-2">
-                                    <button @click="restoreTask(task.id)" class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:text-emerald-400 dark:hover:text-emerald-300 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 px-2.5 py-1.5 rounded-md transition-colors">
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
+                                    <button @click="restoreTask(task.id)" :disabled="restoringId === task.id" class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:text-emerald-400 dark:hover:text-emerald-300 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 px-2.5 py-1.5 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <LoadingSpinner v-if="restoringId === task.id" size="sm" color="currentColor" />
+                                        <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
                                         </svg>
                                         Restore

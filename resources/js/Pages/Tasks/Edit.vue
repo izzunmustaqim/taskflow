@@ -3,6 +3,7 @@ import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { ref } from 'vue';
 import ConfirmModal from '@/Components/ConfirmModal.vue';
+import ActivityLog from '@/Components/ActivityLog.vue';
 
 const props = defineProps<{
     task: {
@@ -17,7 +18,19 @@ const props = defineProps<{
     categories: Array<{ id: number; name: string; color: string }>;
     statuses: Record<string, string>;
     priorities: Record<string, string>;
+    activityLog: {
+        data: Array<{
+            id: number;
+            type: string;
+            description: string;
+            properties: any;
+            created_at: string;
+        }>;
+        links: any[];
+    };
 }>();
+
+const showActivityLog = ref(false);
 
 // Format datetime string for input type="datetime-local" if it exists
 const formattedDueAt = props.task.due_at 
@@ -156,7 +169,60 @@ const deleteTask = () => {
             </div>
         </div>
 
-        <ConfirmModal 
+        <!-- Activity Log Section -->
+        <div class="py-8">
+            <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+                <div class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-gray-100 dark:border-gray-700 rounded-3xl shadow-sm overflow-hidden">
+                    <!-- Header -->
+                    <button
+                        @click="showActivityLog = !showActivityLog"
+                        class="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                    >
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <h3 class="font-semibold text-gray-900 dark:text-white">Activity Log</h3>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">{{ activityLog.data.length }} activities recorded</p>
+                            </div>
+                        </div>
+                        <svg
+                            :class="{ 'rotate-180': showActivityLog }"
+                            class="w-5 h-5 text-gray-400 transition-transform duration-200"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="2"
+                            stroke="currentColor"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                        </svg>
+                    </button>
+
+                    <!-- Content -->
+                    <Transition
+                        enter-active-class="transition-all duration-300 ease-out"
+                        enter-from-class="max-h-0 opacity-0"
+                        enter-to-class="max-h-[1000px] opacity-100"
+                        leave-active-class="transition-all duration-200 ease-in"
+                        leave-from-class="max-h-[1000px] opacity-100"
+                        leave-to-class="max-h-0 opacity-0"
+                    >
+                        <div v-if="showActivityLog" class="overflow-hidden">
+                            <div class="px-6 pb-6 border-t border-gray-100 dark:border-gray-700">
+                                <div class="pt-6">
+                                    <ActivityLog :activities="activityLog" />
+                                </div>
+                            </div>
+                        </div>
+                    </Transition>
+                </div>
+            </div>
+        </div>
+
+        <ConfirmModal
             :show="showDeleteModal"
             title="Delete Task"
             message="Are you sure you want to delete this task? It will be moved to the trash and can be restored later."

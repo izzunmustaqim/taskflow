@@ -6,6 +6,7 @@ namespace App\Services;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Models\ActivityLog;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -91,6 +92,8 @@ final class TaskService
             /** @var Task $task */
             $task = $user->tasks()->create($data);
 
+            $this->logActivity($user, $task, 'created');
+
             return $task->load('category');
         });
     }
@@ -103,7 +106,42 @@ final class TaskService
     public function update(Task $task, array $data): Task
     {
         return DB::transaction(function () use ($task, $data): Task {
+            $oldValues = $task->only(array_keys($data));
             $task->update($data);
+            $newValues = $task->fresh(array_keys($data));
+
+            // Check if status changed
+            if (isset($data['status']) && $oldValues['status'] !== $data['status']) {
+                $this->logActivity(
+                    $task->user,
+                    $task,
+                    'status_changed',
+                    [
+                        'old_status' => $oldValues['status'],
+                        'new_status' => $data['status'],
+                    ]
+                );
+            }
+
+            // Log other changes
+            $changes = [];
+            foreach ($data as $key => $value) {
+                if ($key !== 'status' && ($oldValues[$key] ?? null) !== $value) {
+                    $changes[$key] = [
+                        'old' => $oldValues[$key] ?? null,
+                        'new' => $value,
+                    ];
+                }
+            }
+
+            if (!empty($changes)) {
+                $this->logActivity(
+                    $task->user,
+                    $task,
+                    'updated',
+                    ['changes' => $changes]
+                );
+            }
 
             return $task->fresh(['category']) ?? $task;
         });
@@ -114,6 +152,8 @@ final class TaskService
      */
     public function delete(Task $task): bool
     {
+        $this->logActivity($task->user, $task, 'deleted');
+
         return (bool) $task->delete();
     }
 
@@ -122,7 +162,13 @@ final class TaskService
      */
     public function restore(Task $task): bool
     {
-        return $task->restore();
+        $result = $task->restore();
+
+        if ($result) {
+            $this->logActivity($task->user, $task, 'restored');
+        }
+
+        return $result;
     }
 
     /**
@@ -130,6 +176,8 @@ final class TaskService
      */
     public function forceDelete(Task $task): bool
     {
+        $this->logActivity($task->user, $task, 'force_deleted');
+
         return (bool) $task->forceDelete();
     }
 
@@ -187,5 +235,31 @@ final class TaskService
             ->latest('created_at')
             ->limit($limit)
             ->get();
+    }
+
+    /**
+     * Get activity log for a task.
+     *
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     */
+    public function getActivityLog(Task $task, int $limit = 10)
+    {
+        return ActivityLog::query()
+            ->where('task_id', $task->id)
+            ->latest('created_at')
+            ->paginate($limit);
+    }
+
+    /**
+     * Log an activity for a task.
+     */
+    private function logActivity(User $user, Task $task, string $type, ?array $properties = null): ActivityLog
+    {
+        return ActivityLog::create([
+            'user_id' => $user->id,
+            'task_id' => $task->id,
+            'type' => $type,
+            'properties' => $properties,
+        ]);
     }
 }
