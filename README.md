@@ -4,11 +4,23 @@ A premium, multi-tenant Personal Task Management Application built with **Larave
 
 ## ✨ Features
 
+### Core Features
 - **Strict Multi-Tenant Security**: Users can only see, edit, and delete their own categories and tasks. Built with explicit Laravel Policies to prevent BOLA/IDOR vulnerabilities.
 - **Dynamic Categories**: Create personalized categories with a built-in hex color picker for visual organization.
 - **Advanced Task Board**: Multi-parameter filtering (by status, priority, category, and due date) with debounced text search.
 - **Soft Deletes & Trash System**: Deleted tasks are moved to a dedicated Trash view where they can be restored or permanently destroyed.
+- **Task Activity Log**: Complete audit trail tracking all task changes (creation, updates, status changes, deletions, restorations).
+
+### UI/UX Features
 - **Premium UI/UX**: Designed with glassmorphism (backdrop-blur), micro-animations, and dynamic color-coded badges using Tailwind CSS.
+- **Dark Mode**: Manual toggle with system preference detection and persistent storage.
+- **Toast Notifications**: Non-intrusive success, error, warning, and info messages with auto-dismiss.
+- **Keyboard Shortcuts**: Productivity shortcuts including `Ctrl+N` (new task), `/` (search), `?` (help), `Shift+B` (dark mode toggle).
+- **Confirmation Modals**: Safety prompts for destructive actions with keyboard support (ESC to cancel).
+- **Empty State Illustrations**: Beautiful, themed illustrations for empty lists and search results.
+- **Responsive Design**: Fully responsive across desktop, tablet, and mobile devices.
+
+### Testing
 - **Robust Testing**: Comprehensive Pest PHP feature testing suite covering all CRUD operations and security assertions.
 
 ## 🛠 Tech Stack
@@ -18,6 +30,19 @@ A premium, multi-tenant Personal Task Management Application built with **Larave
 - **Database:** SQLite (default) / PostgreSQL
 - **Testing:** Pest PHP
 - **Deployment:** Docker (PHP-FPM + Nginx on Alpine)
+
+## ⌨️ Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `?` | Toggle keyboard shortcuts help |
+| `Ctrl + N` | Create new task |
+| `/` | Focus search (on Tasks page) |
+| `Escape` | Clear filters / Close modals |
+| `Shift + B` | Toggle dark mode |
+| `D` | Go to Dashboard |
+| `T` | Go to Tasks |
+| `C` | Go to Categories |
 
 ## 🚀 Getting Started
 
@@ -29,7 +54,7 @@ This approach requires zero database or server configuration.
 1. Install [Laravel Herd](https://herd.laravel.com/).
 2. Clone this repository and navigate into it:
    ```bash
-   git clone https://github.com/YOUR-USERNAME/taskflow.git
+   git clone https://github.com/izzunmustaqim/taskflow.git
    cd taskflow
    ```
 3. Install PHP and Node dependencies:
