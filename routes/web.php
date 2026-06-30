@@ -26,6 +26,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tasks/trash', [TaskController::class, 'trash'])->name('tasks.trash');
     Route::post('/tasks/{task}/restore', [TaskController::class, 'restore'])->name('tasks.restore')->withTrashed();
     Route::delete('/tasks/{task}/force', [TaskController::class, 'forceDestroy'])->name('tasks.force-destroy')->withTrashed();
+
+    // Bulk operations
+    Route::post('/tasks/bulk-delete', [TaskController::class, 'bulkDestroy'])->name('tasks.bulk-delete');
+    Route::post('/tasks/bulk-status', [TaskController::class, 'bulkUpdateStatus'])->name('tasks.bulk-status');
+    Route::post('/tasks/bulk-restore', [TaskController::class, 'bulkRestore'])->name('tasks.bulk-restore');
+    Route::post('/tasks/bulk-force-delete', [TaskController::class, 'bulkForceDestroy'])->name('tasks.bulk-force-delete');
+
     Route::resource('tasks', TaskController::class);
 
     // Categories

@@ -23,7 +23,7 @@ onMounted(() => {
         <!-- Thumb with icon -->
         <span
             class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-lg transform transition-all duration-300"
-            :class="isDark ? 'translate-x-7' : 'translate-x-1'"
+            :class="isDark ? 'translate-x-6' : 'translate-x-1'"
         >
             <!-- Sun icon -->
             <svg

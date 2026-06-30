@@ -111,7 +111,7 @@ Implementation tasks for the Task Management Application. Claude can read this f
 
 ### Phase 12: Feature Enhancements
 - [x] Add task activity log (audit trail)
-- [ ] Add bulk operations (mass delete, status change)
+- [x] Add bulk operations (mass delete, status change)
 - [ ] Add drag-and-drop task reordering
 - [ ] Add task sorting options (by date, priority, status)
 - [ ] Add task labels/tags system

@@ -19,6 +19,12 @@ const props = defineProps<{
         } | null;
     };
     isTrash?: boolean;
+    selectable?: boolean;
+    selected?: boolean;
+}>();
+
+const emit = defineEmits<{
+    (e: 'toggle-select', id: number): void;
 }>();
 
 const formatDueTime = (dateString: string | null) => {
@@ -30,14 +36,50 @@ const isOverdue = (dateString: string | null, status: string) => {
     if (!dateString || status === 'completed') return false;
     return isPast(new Date(dateString));
 };
+
+const handleCheckboxClick = (e: Event) => {
+    e.stopPropagation();
+    emit('toggle-select', props.task.id);
+};
+
+const handleCardClick = () => {
+    if (props.selectable) {
+        emit('toggle-select', props.task.id);
+    }
+};
 </script>
 
 <template>
-    <div class="group relative overflow-hidden rounded-2xl bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-gray-100 dark:border-gray-700 p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-indigo-100 dark:hover:border-indigo-900">
+    <div
+        class="group relative overflow-hidden rounded-2xl bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+        :class="[
+            selected
+                ? 'border-indigo-300 dark:border-indigo-600 ring-2 ring-indigo-200 dark:ring-indigo-800'
+                : 'border-gray-100 dark:border-gray-700 hover:border-indigo-100 dark:hover:border-indigo-900',
+            selectable ? 'cursor-pointer' : ''
+        ]"
+        @click="handleCardClick"
+    >
         <!-- Decoration Gradient -->
         <div class="absolute inset-0 bg-gradient-to-br from-indigo-50/50 to-transparent dark:from-indigo-900/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
 
-        <div class="relative z-10 flex flex-col h-full">
+        <!-- Selection Checkbox -->
+        <div v-if="selectable" class="absolute top-3 left-3 z-20" @click="handleCheckboxClick">
+            <div
+                class="w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200"
+                :class="[
+                    selected
+                        ? 'bg-indigo-600 border-indigo-600'
+                        : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 group-hover:border-indigo-400 dark:group-hover:border-indigo-500'
+                ]"
+            >
+                <svg v-if="selected" class="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+            </div>
+        </div>
+
+        <div class="relative z-10 flex flex-col h-full" :class="selectable ? 'pl-4' : ''">
             <!-- Header -->
             <div class="flex justify-between items-start gap-4 mb-3">
                 <div class="flex flex-col gap-1.5">

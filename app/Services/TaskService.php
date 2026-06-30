@@ -108,7 +108,6 @@ final class TaskService
         return DB::transaction(function () use ($task, $data): Task {
             $oldValues = $task->only(array_keys($data));
             $task->update($data);
-            $newValues = $task->fresh(array_keys($data));
 
             // Check if status changed
             if (isset($data['status']) && $oldValues['status'] !== $data['status']) {
@@ -248,6 +247,106 @@ final class TaskService
             ->where('task_id', $task->id)
             ->latest('created_at')
             ->paginate($limit);
+    }
+
+    /**
+     * Soft-delete multiple tasks in bulk.
+     *
+     * @param array<int> $ids
+     * @return int Number of tasks deleted
+     */
+    public function bulkDelete(User $user, array $ids): int
+    {
+        $tasks = Task::query()
+            ->forUser($user)
+            ->whereIn('id', $ids)
+            ->get();
+
+        $count = 0;
+        foreach ($tasks as $task) {
+            $this->logActivity($user, $task, 'deleted');
+            $task->delete();
+            $count++;
+        }
+
+        return $count;
+    }
+
+    /**
+     * Update status of multiple tasks in bulk.
+     *
+     * @param array<int> $ids
+     * @return int Number of tasks updated
+     */
+    public function bulkUpdateStatus(User $user, array $ids, TaskStatus $status): int
+    {
+        $tasks = Task::query()
+            ->forUser($user)
+            ->whereIn('id', $ids)
+            ->get();
+
+        $count = 0;
+        foreach ($tasks as $task) {
+            if ($task->status !== $status) {
+                $oldStatus = $task->status;
+                $task->update(['status' => $status]);
+                $this->logActivity($user, $task, 'status_changed', [
+                    'old_status' => $oldStatus->value,
+                    'new_status' => $status->value,
+                ]);
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Restore multiple soft-deleted tasks in bulk.
+     *
+     * @param array<int> $ids
+     * @return int Number of tasks restored
+     */
+    public function bulkRestore(User $user, array $ids): int
+    {
+        $tasks = Task::query()
+            ->onlyTrashed()
+            ->forUser($user)
+            ->whereIn('id', $ids)
+            ->get();
+
+        $count = 0;
+        foreach ($tasks as $task) {
+            $task->restore();
+            $this->logActivity($user, $task, 'restored');
+            $count++;
+        }
+
+        return $count;
+    }
+
+    /**
+     * Permanently delete multiple trashed tasks in bulk.
+     *
+     * @param array<int> $ids
+     * @return int Number of tasks permanently deleted
+     */
+    public function bulkForceDelete(User $user, array $ids): int
+    {
+        $tasks = Task::query()
+            ->onlyTrashed()
+            ->forUser($user)
+            ->whereIn('id', $ids)
+            ->get();
+
+        $count = 0;
+        foreach ($tasks as $task) {
+            $this->logActivity($user, $task, 'force_deleted');
+            $task->forceDelete();
+            $count++;
+        }
+
+        return $count;
     }
 
     /**

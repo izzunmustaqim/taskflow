@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Http\Requests\BulkStatusRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Task;
@@ -109,6 +110,40 @@ final class TaskController extends Controller
             ->with('success', 'Task moved to trash.');
     }
 
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        Gate::authorize('delete', Task::class);
+
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:tasks,id',
+        ]);
+
+        $ids = $request->input('ids');
+        $count = $this->taskService->bulkDelete($user, $ids);
+
+        return redirect()->back()
+            ->with('success', "{$count} task(s) moved to trash.");
+    }
+
+    public function bulkUpdateStatus(BulkStatusRequest $request): RedirectResponse
+    {
+        Gate::authorize('update', Task::class);
+
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $ids = $request->input('ids');
+        $status = TaskStatus::from($request->input('status'));
+        $count = $this->taskService->bulkUpdateStatus($user, $ids, $status);
+
+        return redirect()->back()
+            ->with('success', "{$count} task(s) updated to {$status->label()}.");
+    }
+
     public function trash(Request $request): Response
     {
         Gate::authorize('viewAny', Task::class);
@@ -141,5 +176,43 @@ final class TaskController extends Controller
 
         return redirect()->back()
             ->with('success', 'Task permanently deleted.');
+    }
+
+    public function bulkRestore(Request $request): RedirectResponse
+    {
+        Gate::authorize('restore', Task::class);
+
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:tasks,id',
+        ]);
+
+        $ids = $request->input('ids');
+        $count = $this->taskService->bulkRestore($user, $ids);
+
+        return redirect()->back()
+            ->with('success', "{$count} task(s) restored successfully.");
+    }
+
+    public function bulkForceDestroy(Request $request): RedirectResponse
+    {
+        Gate::authorize('forceDelete', Task::class);
+
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:tasks,id',
+        ]);
+
+        $ids = $request->input('ids');
+        $count = $this->taskService->bulkForceDelete($user, $ids);
+
+        return redirect()->back()
+            ->with('success', "{$count} task(s) permanently deleted.");
     }
 }
