@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 
@@ -88,10 +88,9 @@ const uploadFile = async (file: File) => {
             onSuccess: () => {
                 isUploading.value = false;
                 uploadProgress.value = 0;
-                window.location.reload();
             },
-            onError: () => {
-                error.value = 'Failed to upload file.';
+            onError: (errors) => {
+                error.value = errors.file || 'Failed to upload file.';
                 isUploading.value = false;
             },
         });
@@ -120,9 +119,7 @@ const handleDrop = async (event: DragEvent) => {
 
 const deleteAttachment = (attachmentId: number) => {
     if (confirm('Are you sure you want to delete this attachment?')) {
-        router.delete(route('attachments.destroy', attachmentId), {
-            onSuccess: () => window.location.reload(),
-        });
+        router.delete(route('attachments.destroy', attachmentId));
     }
 };
 

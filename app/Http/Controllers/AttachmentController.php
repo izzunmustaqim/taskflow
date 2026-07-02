@@ -7,8 +7,8 @@ namespace App\Http\Controllers;
 use App\Models\Attachment;
 use App\Models\Task;
 use App\Services\AttachmentService;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -21,7 +21,7 @@ final class AttachmentController extends Controller
     /**
      * Store a new attachment for a task.
      */
-    public function store(Request $request, Task $task): JsonResponse
+    public function store(Request $request, Task $task): RedirectResponse
     {
         Gate::authorize('update', $task);
 
@@ -46,21 +46,12 @@ final class AttachmentController extends Controller
         $file = $request->file('file');
 
         if ($file === null) {
-            return response()->json(['message' => 'No file provided.'], 400);
+            return back()->withErrors(['file' => 'No file provided.']);
         }
 
         $attachment = $this->attachmentService->upload($task, $user, $file);
 
-        return response()->json([
-            'message' => 'File uploaded successfully.',
-            'attachment' => [
-                'id' => $attachment->id,
-                'original_name' => $attachment->original_name,
-                'mime_type' => $attachment->mime_type,
-                'size' => $attachment->size,
-                'created_at' => $attachment->created_at->toISOString(),
-            ],
-        ]);
+        return back()->with('success', 'File uploaded successfully.');
     }
 
     /**
@@ -76,14 +67,12 @@ final class AttachmentController extends Controller
     /**
      * Delete an attachment.
      */
-    public function destroy(Attachment $attachment): JsonResponse
+    public function destroy(Attachment $attachment): RedirectResponse
     {
         Gate::authorize('update', $attachment->task);
 
         $this->attachmentService->delete($attachment);
 
-        return response()->json([
-            'message' => 'Attachment deleted successfully.',
-        ]);
+        return back()->with('success', 'Attachment deleted successfully.');
     }
 }

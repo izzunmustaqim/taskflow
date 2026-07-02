@@ -117,7 +117,7 @@ Implementation tasks for the Task Management Application. Claude can read this f
 - [x] Add task labels/tags system
 - [x] Add task attachments/uploads
 - [x] Add recurring tasks
-- [ ] Add task templates
+- [x] Add task templates
 
 ### Phase 13: Notifications
 - [ ] Add email notifications for due dates

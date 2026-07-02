@@ -49,6 +49,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Labels
     Route::resource('labels', \App\Http\Controllers\LabelController::class)->except(['show']);
 
+    // Templates
+    Route::resource('templates', \App\Http\Controllers\TemplateController::class)->except(['show']);
+    Route::post('/templates/{template}/use', [\App\Http\Controllers\TemplateController::class, 'useTemplate'])->name('templates.use');
+
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

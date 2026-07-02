@@ -32,6 +32,12 @@ register({
 });
 
 register({
+    key: 'm',
+    description: 'Go to Templates',
+    handler: () => router.visit(route('templates.index')),
+});
+
+register({
     key: 'n',
     ctrl: true,
     description: 'Create new task',
@@ -82,6 +88,9 @@ register({
                             </Link>
                             <Link :href="route('labels.index')" :class="route().current('labels.*') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                                 Labels
+                            </Link>
+                            <Link :href="route('templates.index')" :class="route().current('templates.*') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                                Templates
                             </Link>
                         </div>
                     </div>
