@@ -21,14 +21,11 @@ test('authenticated user can upload an attachment to their task', function () {
     $file = UploadedFile::fake()->create('document.pdf', 100, 'application/pdf');
 
     actingAs($this->user)
-        ->postJson(route('tasks.attachments.store', $this->task->id), [
+        ->post(route('tasks.attachments.store', $this->task->id), [
             'file' => $file,
         ])
-        ->assertOk()
-        ->assertJsonStructure([
-            'message',
-            'attachment' => ['id', 'original_name', 'mime_type', 'size', 'created_at'],
-        ]);
+        ->assertRedirect()
+        ->assertSessionHas('success', 'File uploaded successfully.');
 
     $this->assertDatabaseHas('attachments', [
         'task_id' => $this->task->id,
@@ -44,10 +41,11 @@ test('authenticated user can upload an image attachment', function () {
     $file = UploadedFile::fake()->image('photo.jpg', 200, 200);
 
     actingAs($this->user)
-        ->postJson(route('tasks.attachments.store', $this->task->id), [
+        ->post(route('tasks.attachments.store', $this->task->id), [
             'file' => $file,
         ])
-        ->assertOk();
+        ->assertRedirect()
+        ->assertSessionHas('success', 'File uploaded successfully.');
 
     $this->assertDatabaseHas('attachments', [
         'task_id' => $this->task->id,
@@ -62,9 +60,10 @@ test('authenticated user cannot upload disallowed file type', function () {
     $file = UploadedFile::fake()->create('malware.exe', 100, 'application/x-msdownload');
 
     actingAs($this->user)
-        ->postJson(route('tasks.attachments.store', $this->task->id), [
+        ->post(route('tasks.attachments.store', $this->task->id), [
             'file' => $file,
-        ]);
+        ])
+        ->assertSessionHasErrors(['file']);
 
     // The file should not have been stored as an attachment
     $this->assertDatabaseMissing('attachments', [
@@ -82,7 +81,7 @@ test('authenticated user cannot upload to another users task', function () {
     $file = UploadedFile::fake()->create('document.pdf', 100, 'application/pdf');
 
     actingAs($this->user)
-        ->postJson(route('tasks.attachments.store', $otherTask->id), [
+        ->post(route('tasks.attachments.store', $otherTask->id), [
             'file' => $file,
         ])
         ->assertForbidden();
@@ -127,8 +126,9 @@ test('authenticated user can delete their attachment', function () {
         ->create();
 
     actingAs($this->user)
-        ->deleteJson(route('attachments.destroy', $attachment->id))
-        ->assertOk();
+        ->delete(route('attachments.destroy', $attachment->id))
+        ->assertRedirect()
+        ->assertSessionHas('success', 'Attachment deleted successfully.');
 
     $this->assertDatabaseMissing('attachments', ['id' => $attachment->id]);
 });
@@ -143,7 +143,7 @@ test('authenticated user cannot delete another users attachment', function () {
         ->create();
 
     actingAs($this->user)
-        ->deleteJson(route('attachments.destroy', $attachment->id))
+        ->delete(route('attachments.destroy', $attachment->id))
         ->assertForbidden();
 
     $this->assertDatabaseHas('attachments', ['id' => $attachment->id]);

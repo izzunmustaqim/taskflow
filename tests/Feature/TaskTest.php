@@ -60,8 +60,8 @@ test('user can create a task', function () {
             'status' => TaskStatus::Pending->value,
             'priority' => TaskPriority::Medium->value,
         ])
-        ->assertRedirect(route('tasks.index'))
-        ->assertSessionHas('success', 'Task created successfully.');
+        ->assertRedirect(route('tasks.edit', Task::first()))
+        ->assertSessionHas('success', 'Task created successfully. You can now add attachments.');
 
     assertDatabaseHas('tasks', [
         'user_id' => $this->user->id,
