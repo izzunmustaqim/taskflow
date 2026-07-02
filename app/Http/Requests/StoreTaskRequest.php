@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Enums\RecurrenceType;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Models\Category;
@@ -42,6 +43,8 @@ final class StoreTaskRequest extends FormRequest
                     $query->where('user_id', $this->user()?->id);
                 }),
             ],
+            'recurrence_type' => ['nullable', Rule::enum(RecurrenceType::class)],
+            'recurrence_interval' => ['nullable', 'integer', 'min:1', 'max:365'],
         ];
     }
 

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import ConfirmModal from '@/Components/ConfirmModal.vue';
 import ActivityLog from '@/Components/ActivityLog.vue';
+import FileUpload from '@/Components/FileUpload.vue';
 
 const props = defineProps<{
     task: {
@@ -14,12 +15,16 @@ const props = defineProps<{
         priority: string;
         category_id: number | null;
         due_at: string | null;
+        recurrence_type: string | null;
+        recurrence_interval: number;
         labels?: Array<{ id: number; name: string; color: string }>;
+        attachments?: Array<{ id: number; original_name: string; mime_type: string; size: string | number; created_at: string }>;
     };
     categories: Array<{ id: number; name: string; color: string }>;
     labels: Array<{ id: number; name: string; color: string }>;
     statuses: Record<string, string>;
     priorities: Record<string, string>;
+    recurrenceTypes: Record<string, string>;
     activityLog: {
         data: Array<{
             id: number;
@@ -33,10 +38,11 @@ const props = defineProps<{
 }>();
 
 const showActivityLog = ref(false);
+const showRecurrence = ref(false);
 
 // Format datetime string for input type="datetime-local" if it exists
-const formattedDueAt = props.task.due_at 
-    ? new Date(props.task.due_at).toISOString().slice(0, 16) 
+const formattedDueAt = props.task.due_at
+    ? new Date(props.task.due_at).toISOString().slice(0, 16)
     : '';
 
 const form = useForm({
@@ -47,7 +53,11 @@ const form = useForm({
     category_id: props.task.category_id || '',
     due_at: formattedDueAt,
     label_ids: (props.task.labels || []).map(l => l.id),
+    recurrence_type: props.task.recurrence_type || 'none',
+    recurrence_interval: props.task.recurrence_interval || 1,
 });
+
+const isRecurring = computed(() => form.recurrence_type && form.recurrence_type !== 'none');
 
 const toggleLabel = (id: number) => {
     const index = form.label_ids.indexOf(id);
@@ -174,6 +184,12 @@ const deleteTask = () => {
                                     {{ label.name }}
                                 </button>
                             </div>
+                        </div>
+
+                        <!-- Attachments -->
+                        <div class="border-t border-gray-100 dark:border-gray-700/50 pt-6">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Attachments</label>
+                            <FileUpload :task-id="task.id" :attachments="task.attachments || []" />
                         </div>
 
                         <div class="pt-6 mt-6 border-t border-gray-100 dark:border-gray-700/50 flex items-center justify-between">

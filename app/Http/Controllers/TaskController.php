@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Enums\RecurrenceType;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Http\Requests\BulkStatusRequest;
@@ -62,6 +63,7 @@ final class TaskController extends Controller
             'labels' => $this->labelService->list($user),
             'statuses' => TaskStatus::options(),
             'priorities' => TaskPriority::options(),
+            'recurrenceTypes' => RecurrenceType::options(),
         ]);
     }
 
@@ -72,10 +74,10 @@ final class TaskController extends Controller
         /** @var \App\Models\User $user */
         $user = $request->user();
 
-        $this->taskService->create($user, $request->validatedData());
+        $task = $this->taskService->create($user, $request->validatedData());
 
-        return redirect()->route('tasks.index')
-            ->with('success', 'Task created successfully.');
+        return redirect()->route('tasks.edit', $task)
+            ->with('success', 'Task created successfully. You can now add attachments.');
     }
 
     public function edit(Request $request, Task $task): Response
@@ -86,7 +88,7 @@ final class TaskController extends Controller
         $user = $request->user();
 
         return Inertia::render('Tasks/Edit', [
-            'task' => $task->load('labels'),
+            'task' => $task->load(['labels', 'attachments']),
             'categories' => $this->categoryService->list($user),
             'labels' => $this->labelService->list($user),
             'statuses' => TaskStatus::options(),

@@ -36,6 +36,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Reorder
     Route::post('/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
 
+    // Attachments
+    Route::post('/tasks/{task}/attachments', [\App\Http\Controllers\AttachmentController::class, 'store'])->name('tasks.attachments.store');
+    Route::get('/attachments/{attachment}/download', [\App\Http\Controllers\AttachmentController::class, 'download'])->name('attachments.download');
+    Route::delete('/attachments/{attachment}', [\App\Http\Controllers\AttachmentController::class, 'destroy'])->name('attachments.destroy');
+
     Route::resource('tasks', TaskController::class);
 
     // Categories

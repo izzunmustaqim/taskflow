@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\RecurrenceType;
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
 use App\Models\ActivityLog;
@@ -108,6 +109,19 @@ final class TaskService
             $labelIds = $data['label_ids'] ?? [];
             unset($data['label_ids']);
 
+            // Handle recurrence
+            $recurrenceType = $data['recurrence_type'] ?? null;
+            $recurrenceInterval = $data['recurrence_interval'] ?? 1;
+            unset($data['recurrence_type'], $data['recurrence_interval']);
+
+            if ($recurrenceType && $recurrenceType !== RecurrenceType::None->value) {
+                $recurrenceTypeEnum = RecurrenceType::from($recurrenceType);
+                $dueDate = isset($data['due_at']) ? \Carbon\Carbon::parse($data['due_at']) : now();
+                $data['recurrence_type'] = $recurrenceType;
+                $data['recurrence_interval'] = $recurrenceInterval;
+                $data['next_occurrence_at'] = $recurrenceTypeEnum->getNextOccurrence($dueDate, $recurrenceInterval);
+            }
+
             /** @var Task $task */
             $task = $user->tasks()->create($data);
 
@@ -117,7 +131,7 @@ final class TaskService
 
             $this->logActivity($user, $task, 'created');
 
-            return $task->load(['category', 'labels']);
+            return $task->load(['category', 'labels', 'attachments']);
         });
     }
 
@@ -131,6 +145,25 @@ final class TaskService
         return DB::transaction(function () use ($task, $data): Task {
             $labelIds = $data['label_ids'] ?? null;
             unset($data['label_ids']);
+
+            // Handle recurrence
+            $recurrenceType = $data['recurrence_type'] ?? null;
+            $recurrenceInterval = $data['recurrence_interval'] ?? null;
+            unset($data['recurrence_type'], $data['recurrence_interval']);
+
+            if ($recurrenceType !== null) {
+                if ($recurrenceType && $recurrenceType !== RecurrenceType::None->value) {
+                    $recurrenceTypeEnum = RecurrenceType::from($recurrenceType);
+                    $dueDate = isset($data['due_at']) ? \Carbon\Carbon::parse($data['due_at']) : ($task->due_at ?? now());
+                    $data['recurrence_type'] = $recurrenceType;
+                    $data['recurrence_interval'] = $recurrenceInterval ?? $task->recurrence_interval;
+                    $data['next_occurrence_at'] = $recurrenceTypeEnum->getNextOccurrence($dueDate, $data['recurrence_interval']);
+                } else {
+                    $data['recurrence_type'] = null;
+                    $data['recurrence_interval'] = 1;
+                    $data['next_occurrence_at'] = null;
+                }
+            }
 
             $oldValues = $task->only(array_keys($data));
             $task->update($data);
@@ -150,6 +183,13 @@ final class TaskService
                         'new_status' => $data['status'],
                     ]
                 );
+
+                // Create next occurrence if task is recurring and just completed
+                if ($data['status'] === TaskStatus::Completed->value
+                    && $task->isRecurring()
+                    && $task->next_occurrence_at !== null) {
+                    $this->createNextOccurrence($task);
+                }
             }
 
             // Log other changes
@@ -172,7 +212,7 @@ final class TaskService
                 );
             }
 
-            return $task->fresh(['category', 'labels']) ?? $task;
+            return $task->fresh(['category', 'labels', 'attachments']) ?? $task;
         });
     }
 
@@ -410,5 +450,64 @@ final class TaskService
             'type' => $type,
             'properties' => $properties,
         ]);
+    }
+
+    /**
+     * Create the next occurrence of a recurring task.
+     */
+    private function createNextOccurrence(Task $task): Task
+    {
+        $nextDueDate = $task->recurrence_type->getNextOccurrence(
+            $task->due_at ?? now(),
+            $task->recurrence_interval
+        );
+
+        $nextTask = Task::create([
+            'user_id' => $task->user_id,
+            'category_id' => $task->category_id,
+            'title' => $task->title,
+            'description' => $task->description,
+            'status' => TaskStatus::Pending,
+            'priority' => $task->priority,
+            'due_at' => $nextDueDate,
+            'recurrence_type' => $task->recurrence_type,
+            'recurrence_interval' => $task->recurrence_interval,
+            'next_occurrence_at' => $task->recurrence_type->getNextOccurrence(
+                $nextDueDate,
+                $task->recurrence_interval
+            ),
+            'parent_task_id' => $task->parent_task_id ?? $task->id,
+        ]);
+
+        // Copy labels
+        if ($task->labels()->count() > 0) {
+            $nextTask->labels()->sync($task->labels->pluck('id'));
+        }
+
+        $this->logActivity($task->user, $nextTask, 'created_from_recurring', [
+            'parent_task_id' => $task->id,
+        ]);
+
+        return $nextTask;
+    }
+
+    /**
+     * Process all tasks that are due for recurrence.
+     *
+     * @return int Number of tasks recursed
+     */
+    public function processRecurringTasks(): int
+    {
+        $tasks = Task::query()
+            ->dueForRecurrence()
+            ->get();
+
+        $count = 0;
+        foreach ($tasks as $task) {
+            $this->createNextOccurrence($task);
+            $count++;
+        }
+
+        return $count;
     }
 }

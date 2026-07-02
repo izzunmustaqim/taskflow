@@ -115,7 +115,7 @@ Implementation tasks for the Task Management Application. Claude can read this f
 - [x] Add drag-and-drop task reordering
 - [x] Add task sorting options (by date, priority, status)
 - [x] Add task labels/tags system
-- [ ] Add task attachments/uploads
+- [x] Add task attachments/uploads
 - [ ] Add recurring tasks
 - [ ] Add task templates
 
