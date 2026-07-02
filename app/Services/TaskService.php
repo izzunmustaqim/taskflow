@@ -174,6 +174,9 @@ final class TaskService
 
             // Check if status changed
             if (isset($data['status']) && $oldValues['status'] !== $data['status']) {
+                // Load user relationship for activity logging and recurring task creation
+                $task->load('user');
+
                 $this->logActivity(
                     $task->user,
                     $task,
@@ -457,13 +460,14 @@ final class TaskService
      */
     private function createNextOccurrence(Task $task): Task
     {
+        $task->load('user');
+
         $nextDueDate = $task->recurrence_type->getNextOccurrence(
             $task->due_at ?? now(),
             $task->recurrence_interval
         );
 
-        $nextTask = Task::create([
-            'user_id' => $task->user_id,
+        $nextTask = $task->user->tasks()->create([
             'category_id' => $task->category_id,
             'title' => $task->title,
             'description' => $task->description,

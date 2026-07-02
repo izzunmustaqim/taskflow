@@ -186,6 +186,41 @@ const deleteTask = () => {
                             </div>
                         </div>
 
+                        <!-- Recurrence -->
+                        <div class="border-t border-gray-100 dark:border-gray-700/50 pt-6">
+                            <button type="button" @click="showRecurrence = !showRecurrence" class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                                <svg :class="{ 'rotate-90': showRecurrence }" class="w-4 h-4 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                </svg>
+                                Recurrence Settings
+                                <span v-if="isRecurring" class="px-2 py-0.5 text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-full">Active</span>
+                            </button>
+
+                            <div v-if="showRecurrence" class="mt-4 space-y-4">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Repeat</label>
+                                        <select v-model="form.recurrence_type" class="mt-1 block w-full rounded-xl border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/50 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 transition-colors">
+                                            <option value="none">No Repeat</option>
+                                            <option v-for="(label, val) in recurrenceTypes" :key="val" :value="val">{{ label }}</option>
+                                        </select>
+                                    </div>
+
+                                    <div v-if="isRecurring">
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Every</label>
+                                        <div class="mt-1 flex items-center gap-2">
+                                            <input type="number" v-model="form.recurrence_interval" min="1" max="365" class="block w-24 rounded-xl border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900/50 text-gray-900 dark:text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-2.5 transition-colors" />
+                                            <span class="text-sm text-gray-600 dark:text-gray-400">{{ form.recurrence_interval === 1 ? form.recurrence_type?.replace(/s$/, '') : form.recurrence_type }}(s)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p v-if="isRecurring" class="text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                                    ℹ️ When this task is completed, a new task will be automatically created with the next due date.
+                                </p>
+                            </div>
+                        </div>
+
                         <!-- Attachments -->
                         <div class="border-t border-gray-100 dark:border-gray-700/50 pt-6">
                             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Attachments</label>

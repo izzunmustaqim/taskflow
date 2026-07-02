@@ -116,7 +116,7 @@ Implementation tasks for the Task Management Application. Claude can read this f
 - [x] Add task sorting options (by date, priority, status)
 - [x] Add task labels/tags system
 - [x] Add task attachments/uploads
-- [ ] Add recurring tasks
+- [x] Add recurring tasks
 - [ ] Add task templates
 
 ### Phase 13: Notifications

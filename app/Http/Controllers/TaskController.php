@@ -93,6 +93,7 @@ final class TaskController extends Controller
             'labels' => $this->labelService->list($user),
             'statuses' => TaskStatus::options(),
             'priorities' => TaskPriority::options(),
+            'recurrenceTypes' => RecurrenceType::options(),
             'activityLog' => $this->taskService->getActivityLog($task),
         ]);
     }
