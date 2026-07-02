@@ -9,6 +9,7 @@ use App\Models\NotificationPreference;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,7 +51,7 @@ final class NotificationController extends Controller
      */
     public function markAsRead(Request $request, Notification $notification): JsonResponse
     {
-        $this->authorize('update', $notification);
+        Gate::authorize('update', $notification);
 
         $this->notificationService->markAsRead($notification);
 
@@ -93,7 +94,7 @@ final class NotificationController extends Controller
      */
     public function destroy(Request $request, Notification $notification): JsonResponse
     {
-        $this->authorize('delete', $notification);
+        Gate::authorize('delete', $notification);
 
         $notification->delete();
 

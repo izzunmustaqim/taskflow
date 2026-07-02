@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { ref, onMounted } from 'vue';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import FlashMessage from '@/Components/FlashMessage.vue';
 import LoadingBar from '@/Components/LoadingBar.vue';
 import KeyboardShortcutsHelp from '@/Components/KeyboardShortcutsHelp.vue';
@@ -11,6 +11,24 @@ import { useDarkMode } from '@/Composables/useDarkMode';
 const showingNavigationDropdown = ref(false);
 const { register } = useKeyboardShortcuts();
 const { toggle: toggleDarkMode } = useDarkMode();
+const page = usePage();
+const unreadCount = ref(0);
+
+const fetchUnreadCount = async () => {
+    try {
+        const response = await fetch(route('notifications.unread-count'));
+        const data = await response.json();
+        unreadCount.value = data.count;
+    } catch (e) {
+        // Silently fail
+    }
+};
+
+onMounted(() => {
+    fetchUnreadCount();
+    // Poll for new notifications every 60 seconds
+    setInterval(fetchUnreadCount, 60000);
+});
 
 // Register global shortcuts
 register({
@@ -92,6 +110,13 @@ register({
                             <Link :href="route('templates.index')" :class="route().current('templates.*') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                                 Templates
                             </Link>
+                            <Link :href="route('notifications.index')" :class="route().current('notifications.*') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                                <span class="relative">
+                                    🔔
+                                    <span v-if="unreadCount > 0" class="absolute -top-1 -right-2 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-600 rounded-full">{{ unreadCount > 9 ? '9+' : unreadCount }}</span>
+                                </span>
+                                <span class="ms-1">Notifications</span>
+                            </Link>
                         </div>
                     </div>
 
@@ -137,6 +162,10 @@ register({
                     </Link>
                     <Link :href="route('labels.index')" :class="route().current('labels.*') ? 'bg-indigo-50 dark:bg-indigo-900/50 border-indigo-500 text-indigo-700 dark:text-indigo-400' : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-800 dark:hover:text-gray-200'" class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out">
                         Labels
+                    </Link>
+                    <Link :href="route('notifications.index')" :class="route().current('notifications.*') ? 'bg-indigo-50 dark:bg-indigo-900/50 border-indigo-500 text-indigo-700 dark:text-indigo-400' : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-800 dark:hover:text-gray-200'" class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out">
+                        🔔 Notifications
+                        <span v-if="unreadCount > 0" class="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold text-white bg-red-600 rounded-full">{{ unreadCount }}</span>
                     </Link>
                 </div>
 

@@ -120,10 +120,10 @@ Implementation tasks for the Task Management Application. Claude can read this f
 - [x] Add task templates
 
 ### Phase 13: Notifications
-- [ ] Add email notifications for due dates
-- [ ] Add in-app notifications
-- [ ] Add notification preferences
-- [ ] Add reminder system
+- [x] Add email notifications for due dates
+- [x] Add in-app notifications
+- [x] Add notification preferences
+- [x] Add reminder system
 
 ### Phase 14: Export & Import
 - [ ] Add CSV export for tasks
