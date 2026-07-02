@@ -26,6 +26,7 @@ final class TaskService
         $query = Task::query()
             ->forUser($user)
             ->with('category')
+            ->orderBy('sort_order')
             ->latest('created_at');
 
         if (isset($filters['status']) && $filters['status'] !== '') {
@@ -54,11 +55,26 @@ final class TaskService
             });
         }
 
+        if (isset($filters['label_id']) && $filters['label_id'] !== '') {
+            $query->whereHas('labels', function ($q) use ($filters): void {
+                $q->where('labels.id', (int) $filters['label_id']);
+            });
+        }
+
         if (isset($filters['due']) && $filters['due'] === 'overdue') {
             $query->overdue();
         } elseif (isset($filters['due']) && $filters['due'] === 'soon') {
             $query->dueSoon();
         }
+
+        // Sorting
+        $allowedSorts = ['created_at', 'due_date', 'priority', 'status', 'sort_order'];
+        $sortField = isset($filters['sort']) && in_array($filters['sort'], $allowedSorts, true)
+            ? $filters['sort']
+            : 'created_at';
+        $sortDirection = isset($filters['order']) && $filters['order'] === 'asc' ? 'asc' : 'desc';
+
+        $query->reorder($sortField, $sortDirection);
 
         $perPage = isset($filters['per_page']) ? min((int) $filters['per_page'], 50) : 15;
 
@@ -89,12 +105,19 @@ final class TaskService
     public function create(User $user, array $data): Task
     {
         return DB::transaction(function () use ($user, $data): Task {
+            $labelIds = $data['label_ids'] ?? [];
+            unset($data['label_ids']);
+
             /** @var Task $task */
             $task = $user->tasks()->create($data);
 
+            if (!empty($labelIds)) {
+                $task->labels()->sync($labelIds);
+            }
+
             $this->logActivity($user, $task, 'created');
 
-            return $task->load('category');
+            return $task->load(['category', 'labels']);
         });
     }
 
@@ -106,8 +129,15 @@ final class TaskService
     public function update(Task $task, array $data): Task
     {
         return DB::transaction(function () use ($task, $data): Task {
+            $labelIds = $data['label_ids'] ?? null;
+            unset($data['label_ids']);
+
             $oldValues = $task->only(array_keys($data));
             $task->update($data);
+
+            if ($labelIds !== null) {
+                $task->labels()->sync($labelIds);
+            }
 
             // Check if status changed
             if (isset($data['status']) && $oldValues['status'] !== $data['status']) {
@@ -142,7 +172,7 @@ final class TaskService
                 );
             }
 
-            return $task->fresh(['category']) ?? $task;
+            return $task->fresh(['category', 'labels']) ?? $task;
         });
     }
 
@@ -343,6 +373,26 @@ final class TaskService
         foreach ($tasks as $task) {
             $this->logActivity($user, $task, 'force_deleted');
             $task->forceDelete();
+            $count++;
+        }
+
+        return $count;
+    }
+
+    /**
+     * Reorder tasks for a user by updating sort_order.
+     *
+     * @param array<int, int> $orderedIds Task IDs in desired order
+     * @return int Number of tasks reordered
+     */
+    public function reorder(User $user, array $orderedIds): int
+    {
+        $count = 0;
+        foreach ($orderedIds as $position => $id) {
+            Task::query()
+                ->forUser($user)
+                ->where('id', $id)
+                ->update(['sort_order' => $position]);
             $count++;
         }
 

@@ -80,6 +80,9 @@ register({
                             <Link :href="route('categories.index')" :class="route().current('categories.*') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
                                 Categories
                             </Link>
+                            <Link :href="route('labels.index')" :class="route().current('labels.*') ? 'border-indigo-500 text-gray-900 dark:text-white' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'" class="inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors">
+                                Labels
+                            </Link>
                         </div>
                     </div>
 
@@ -122,6 +125,9 @@ register({
                     </Link>
                     <Link :href="route('categories.index')" :class="route().current('categories.*') ? 'bg-indigo-50 dark:bg-indigo-900/50 border-indigo-500 text-indigo-700 dark:text-indigo-400' : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-800 dark:hover:text-gray-200'" class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out">
                         Categories
+                    </Link>
+                    <Link :href="route('labels.index')" :class="route().current('labels.*') ? 'bg-indigo-50 dark:bg-indigo-900/50 border-indigo-500 text-indigo-700 dark:text-indigo-400' : 'border-transparent text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-800 dark:hover:text-gray-200'" class="block w-full ps-3 pe-4 py-2 border-l-4 text-start text-base font-medium transition duration-150 ease-in-out">
+                        Labels
                     </Link>
                 </div>
 

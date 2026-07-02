@@ -11,6 +11,7 @@ use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Models\Task;
 use App\Services\CategoryService;
+use App\Services\LabelService;
 use App\Services\TaskService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,6 +24,7 @@ final class TaskController extends Controller
     public function __construct(
         private readonly TaskService $taskService,
         private readonly CategoryService $categoryService,
+        private readonly LabelService $labelService,
     ) {}
 
     public function index(Request $request): Response
@@ -32,7 +34,7 @@ final class TaskController extends Controller
         /** @var \App\Models\User $user */
         $user = $request->user();
 
-        $filters = $request->only(['status', 'priority', 'category_id', 'search', 'due', 'per_page']);
+        $filters = $request->only(['status', 'priority', 'category_id', 'label_id', 'search', 'due', 'per_page', 'sort', 'order']);
         $tasks = $this->taskService->list($user, $filters);
         $categories = $this->categoryService->list($user);
         $stats = $this->taskService->getStats($user);
@@ -41,6 +43,7 @@ final class TaskController extends Controller
             'tasks' => $tasks,
             'filters' => $filters,
             'categories' => $categories,
+            'labels' => $this->labelService->list($user),
             'stats' => $stats,
             'statuses' => TaskStatus::options(),
             'priorities' => TaskPriority::options(),
@@ -56,6 +59,7 @@ final class TaskController extends Controller
 
         return Inertia::render('Tasks/Create', [
             'categories' => $this->categoryService->list($user),
+            'labels' => $this->labelService->list($user),
             'statuses' => TaskStatus::options(),
             'priorities' => TaskPriority::options(),
         ]);
@@ -82,8 +86,9 @@ final class TaskController extends Controller
         $user = $request->user();
 
         return Inertia::render('Tasks/Edit', [
-            'task' => $task,
+            'task' => $task->load('labels'),
             'categories' => $this->categoryService->list($user),
+            'labels' => $this->labelService->list($user),
             'statuses' => TaskStatus::options(),
             'priorities' => TaskPriority::options(),
             'activityLog' => $this->taskService->getActivityLog($task),
@@ -112,7 +117,6 @@ final class TaskController extends Controller
 
     public function bulkDestroy(Request $request): RedirectResponse
     {
-        Gate::authorize('delete', Task::class);
 
         /** @var \App\Models\User $user */
         $user = $request->user();
@@ -131,7 +135,6 @@ final class TaskController extends Controller
 
     public function bulkUpdateStatus(BulkStatusRequest $request): RedirectResponse
     {
-        Gate::authorize('update', Task::class);
 
         /** @var \App\Models\User $user */
         $user = $request->user();
@@ -180,7 +183,6 @@ final class TaskController extends Controller
 
     public function bulkRestore(Request $request): RedirectResponse
     {
-        Gate::authorize('restore', Task::class);
 
         /** @var \App\Models\User $user */
         $user = $request->user();
@@ -199,7 +201,6 @@ final class TaskController extends Controller
 
     public function bulkForceDestroy(Request $request): RedirectResponse
     {
-        Gate::authorize('forceDelete', Task::class);
 
         /** @var \App\Models\User $user */
         $user = $request->user();
@@ -214,5 +215,24 @@ final class TaskController extends Controller
 
         return redirect()->back()
             ->with('success', "{$count} task(s) permanently deleted.");
+    }
+
+    public function reorder(Request $request): \Illuminate\Http\JsonResponse
+    {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:tasks,id',
+        ]);
+
+        $ids = $request->input('ids');
+        $count = $this->taskService->reorder($user, $ids);
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$count} task(s) reordered.",
+        ]);
     }
 }

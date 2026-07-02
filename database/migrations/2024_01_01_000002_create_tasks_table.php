@@ -26,6 +26,7 @@ return new class extends Migration
             $table->string('status')->default('pending');
             $table->string('priority')->default('medium');
             $table->timestamp('due_at')->nullable();
+            $table->integer('sort_order')->default(0);
             $table->timestamps();
             $table->softDeletes();
 

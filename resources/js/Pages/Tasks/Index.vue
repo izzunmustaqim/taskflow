@@ -8,22 +8,25 @@ import EmptyState from '@/Components/EmptyState.vue';
 import ConfirmModal from '@/Components/ConfirmModal.vue';
 import { debounce } from 'lodash';
 import { useKeyboardShortcuts } from '@/Composables/useKeyboardShortcuts';
+import draggable from 'vuedraggable';
+
+interface TaskData {
+    id: number;
+    title: string;
+    description: string | null;
+    status: string;
+    priority: string;
+    due_at: string | null;
+    category?: {
+        id: number;
+        name: string;
+        color: string;
+    } | null;
+}
 
 const props = defineProps<{
     tasks: {
-        data: Array<{
-            id: number;
-            title: string;
-            description: string | null;
-            status: string;
-            priority: string;
-            due_at: string | null;
-            category?: {
-                id: number;
-                name: string;
-                color: string;
-            } | null;
-        }>;
+        data: TaskData[];
         links: any[];
     };
     filters: {
@@ -31,9 +34,13 @@ const props = defineProps<{
         status?: string;
         priority?: string;
         category_id?: string;
+        label_id?: string;
         due?: string;
+        sort?: string;
+        order?: string;
     };
     categories: Array<{ id: number; name: string }>;
+    labels: Array<{ id: number; name: string; color: string }>;
     statuses: Record<string, string>;
     priorities: Record<string, string>;
 }>();
@@ -42,8 +49,30 @@ const search = ref(props.filters.search || '');
 const status = ref(props.filters.status || '');
 const priority = ref(props.filters.priority || '');
 const category_id = ref(props.filters.category_id || '');
+const label_id = ref(props.filters.label_id || '');
 const due = ref(props.filters.due || '');
+const sort = ref(props.filters.sort || 'created_at');
+const order = ref(props.filters.order || 'desc');
 const searchInput = ref<HTMLInputElement | null>(null);
+
+// Drag-and-drop state
+const taskList = ref<TaskData[]>([...props.tasks.data]);
+const isDragging = ref(false);
+
+watch(() => props.tasks.data, (newData) => {
+    taskList.value = [...newData];
+});
+
+const isDraggable = computed(() => sort.value === 'sort_order' || sort.value === 'created_at');
+
+const onDragEnd = () => {
+    isDragging.value = false;
+    const orderedIds = taskList.value.map(t => t.id);
+    router.post(route('tasks.reorder'), { ids: orderedIds }, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
 
 // Bulk selection state
 const selectedIds = ref<Set<number>>(new Set());
@@ -129,7 +158,10 @@ const clearFilters = () => {
     status.value = '';
     priority.value = '';
     category_id.value = '';
+    label_id.value = '';
     due.value = '';
+    sort.value = 'created_at';
+    order.value = 'desc';
 };
 
 const performSearch = debounce(() => {
@@ -140,13 +172,16 @@ const performSearch = debounce(() => {
             status: status.value,
             priority: priority.value,
             category_id: category_id.value,
+            label_id: label_id.value,
             due: due.value,
+            sort: sort.value,
+            order: order.value,
         },
         { preserveState: true, preserveScroll: true, replace: true }
     );
 }, 300);
 
-watch([search, status, priority, category_id, due], performSearch);
+watch([search, status, priority, category_id, label_id, due, sort, order], performSearch);
 
 const { register, unregister } = useKeyboardShortcuts();
 
@@ -229,7 +264,7 @@ onUnmounted(() => {
                 
                 <!-- Filters -->
                 <div class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-gray-100 dark:border-gray-700 rounded-2xl p-6 shadow-sm mb-8">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                         <!-- Search -->
                         <div class="lg:col-span-2 relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -263,6 +298,33 @@ onUnmounted(() => {
                                 <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
                             </select>
                         </div>
+
+                        <!-- Label -->
+                        <div>
+                            <select v-model="label_id" class="block w-full py-2.5 pl-3 pr-10 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors">
+                                <option value="">All Labels</option>
+                                <option v-for="label in labels" :key="label.id" :value="label.id">{{ label.name }}</option>
+                            </select>
+                        </div>
+
+                        <!-- Sort -->
+                        <div class="flex gap-2">
+                            <select v-model="sort" class="flex-1 block w-full py-2.5 pl-3 pr-10 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors">
+                                <option value="created_at">Created</option>
+                                <option value="due_date">Due Date</option>
+                                <option value="priority">Priority</option>
+                                <option value="status">Status</option>
+                            </select>
+                            <button
+                                @click="order = order === 'asc' ? 'desc' : 'asc'"
+                                class="inline-flex items-center justify-center w-10 shrink-0 border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 text-gray-600 dark:text-gray-400 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                :title="order === 'asc' ? 'Ascending' : 'Descending'"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': order === 'asc' }">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between border-t border-gray-100 dark:border-gray-700/50 pt-4 gap-3">
@@ -281,7 +343,7 @@ onUnmounted(() => {
                             </label>
                         </div>
                         
-                        <button v-if="search || status || priority || category_id || due" @click="clearFilters" class="text-sm font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors">
+                        <button v-if="search || status || priority || category_id || due || sort !== 'created_at' || order !== 'desc'" @click="clearFilters" class="text-sm font-medium text-gray-500 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 transition-colors">
                             Clear filters
                         </button>
                     </div>
@@ -290,13 +352,13 @@ onUnmounted(() => {
                 <!-- Task List -->
                 <EmptyState
                     v-if="tasks.data.length === 0"
-                    :icon="search || status || priority || category_id || due ? 'search' : 'tasks'"
-                    :title="search || status || priority || category_id || due ? 'No tasks match your filters' : 'No tasks yet'"
-                    :description="search || status || priority || category_id || due ? 'Try adjusting your filters or clear them to see all tasks.' : 'Create your first task to get started with TaskFlow.'"
-                    :action-text="!search && !status && !priority && !category_id && !due ? 'Create Task' : undefined"
-                    :action-href="!search && !status && !priority && !category_id && !due ? route('tasks.create') : undefined"
+                    :icon="search || status || priority || category_id || due || sort !== 'created_at' || order !== 'desc' ? 'search' : 'tasks'"
+                    :title="search || status || priority || category_id || due || sort !== 'created_at' || order !== 'desc' ? 'No tasks match your filters' : 'No tasks yet'"
+                    :description="search || status || priority || category_id || due || sort !== 'created_at' || order !== 'desc' ? 'Try adjusting your filters or clear them to see all tasks.' : 'Create your first task to get started with TaskFlow.'"
+                    :action-text="!search && !status && !priority && !category_id && !due && sort === 'created_at' && order === 'desc' ? 'Create Task' : undefined"
+                    :action-href="!search && !status && !priority && !category_id && !due && sort === 'created_at' && order === 'desc' ? route('tasks.create') : undefined"
                 >
-                    <template v-if="search || status || priority || category_id || due" #action>
+                    <template v-if="search || status || priority || category_id || due || sort !== 'created_at' || order !== 'desc'" #action>
                         <button @click="clearFilters" class="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 font-medium rounded-xl transition-colors">
                             Clear Filters
                         </button>
@@ -371,16 +433,26 @@ onUnmounted(() => {
                         <span class="text-xs text-gray-400 dark:text-gray-500">Press <kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-mono">A</kbd> to toggle</span>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                        <TaskCard
-                            v-for="task in tasks.data"
-                            :key="task.id"
-                            :task="task"
-                            selectable
-                            :selected="selectedIds.has(task.id)"
-                            @toggle-select="toggleSelect"
-                        />
-                    </div>
+                    <draggable
+                        v-model="taskList"
+                        item-key="id"
+                        handle=".drag-handle"
+                        ghost-class="opacity-40"
+                        :disabled="!isDraggable"
+                        class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
+                        @start="isDragging = true"
+                        @end="onDragEnd"
+                    >
+                        <template #item="{ element }">
+                            <TaskCard
+                                :task="element"
+                                :selectable="!isDraggable || isDragging"
+                                :selected="selectedIds.has(element.id)"
+                                :draggable="isDraggable"
+                                @toggle-select="toggleSelect"
+                            />
+                        </template>
+                    </draggable>
                     
                     <div class="flex justify-center mt-10">
                         <Pagination :links="tasks.links" />

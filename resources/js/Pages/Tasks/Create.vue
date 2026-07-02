@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { ref } from 'vue';
 
-defineProps<{
+const props = defineProps<{
     categories: Array<{ id: number; name: string; color: string }>;
+    labels: Array<{ id: number; name: string; color: string }>;
     statuses: Record<string, string>;
     priorities: Record<string, string>;
 }>();
@@ -15,7 +17,17 @@ const form = useForm({
     priority: 'medium',
     category_id: '' as number | string,
     due_at: '',
+    label_ids: [] as number[],
 });
+
+const toggleLabel = (id: number) => {
+    const index = form.label_ids.indexOf(id);
+    if (index === -1) {
+        form.label_ids.push(id);
+    } else {
+        form.label_ids.splice(index, 1);
+    }
+};
 
 const submit = () => {
     form.post(route('tasks.store'));
@@ -103,6 +115,27 @@ const submit = () => {
                                     </select>
                                 </div>
                                 <p v-if="form.errors.status" class="mt-2 text-sm text-red-600 dark:text-red-400">{{ form.errors.status }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Labels -->
+                        <div v-if="labels.length > 0" class="border-t border-gray-100 dark:border-gray-700/50 pt-6">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Labels</label>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    v-for="label in labels"
+                                    :key="label.id"
+                                    type="button"
+                                    @click="toggleLabel(label.id)"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-all duration-200"
+                                    :class="form.label_ids.includes(label.id)
+                                        ? 'border-current shadow-sm scale-105'
+                                        : 'border-transparent bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
+                                    :style="form.label_ids.includes(label.id) ? { color: label.color, backgroundColor: label.color + '20' } : {}"
+                                >
+                                    <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: label.color }"></span>
+                                    {{ label.name }}
+                                </button>
                             </div>
                         </div>
 

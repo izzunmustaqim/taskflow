@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -27,6 +28,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property \Illuminate\Support\Carbon|null $deleted_at
  * @property-read User $user
  * @property-read Category|null $category
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Label> $labels
  */
 final class Task extends Model
 {
@@ -44,7 +46,13 @@ final class Task extends Model
         'priority',
         'category_id',
         'due_at',
+        'sort_order',
     ];
+
+    /**
+     * @var list<string>
+     */
+    protected $with = ['category'];
 
     /**
      * @return array<string, string>
@@ -74,6 +82,14 @@ final class Task extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * @return BelongsToMany<Label, $this>
+     */
+    public function labels(): BelongsToMany
+    {
+        return $this->belongsToMany(Label::class, 'task_label')->withTimestamps();
     }
 
     // ─── Query Scopes ────────────────────────────────────────

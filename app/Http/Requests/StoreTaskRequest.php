@@ -35,6 +35,13 @@ final class StoreTaskRequest extends FormRequest
                 }),
             ],
             'due_at' => ['nullable', 'date', 'after_or_equal:today'],
+            'label_ids' => ['nullable', 'array'],
+            'label_ids.*' => [
+                'integer',
+                Rule::exists('labels', 'id')->where(function ($query): void {
+                    $query->where('user_id', $this->user()?->id);
+                }),
+            ],
         ];
     }
 

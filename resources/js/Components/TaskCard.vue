@@ -21,6 +21,7 @@ const props = defineProps<{
     isTrash?: boolean;
     selectable?: boolean;
     selected?: boolean;
+    draggable?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -97,8 +98,13 @@ const handleCardClick = () => {
                     </div>
                 </div>
                 
-                <div class="flex gap-2 shrink-0 z-20">
+                <div class="flex gap-2 shrink-0 z-20 items-center">
                     <StatusBadge :status="task.status" />
+                    <div v-if="draggable" class="drag-handle cursor-grab active:cursor-grabbing p-1 rounded-md text-gray-400 dark:text-gray-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" title="Drag to reorder">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                        </svg>
+                    </div>
                 </div>
             </div>
 

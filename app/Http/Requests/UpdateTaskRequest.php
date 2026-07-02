@@ -34,6 +34,13 @@ final class UpdateTaskRequest extends FormRequest
                 }),
             ],
             'due_at' => ['nullable', 'date'],
+            'label_ids' => ['nullable', 'array'],
+            'label_ids.*' => [
+                'integer',
+                Rule::exists('labels', 'id')->where(function ($query): void {
+                    $query->where('user_id', $this->user()?->id);
+                }),
+            ],
         ];
     }
 

@@ -21,6 +21,7 @@ use Illuminate\Notifications\Notifiable;
  * @property \Illuminate\Support\Carbon $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, Task> $tasks
  * @property-read \Illuminate\Database\Eloquent\Collection<int, Category> $categories
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Label> $labels
  */
 final class User extends Authenticatable
 {
@@ -72,5 +73,13 @@ final class User extends Authenticatable
     public function categories(): HasMany
     {
         return $this->hasMany(Category::class);
+    }
+
+    /**
+     * @return HasMany<Label, $this>
+     */
+    public function labels(): HasMany
+    {
+        return $this->hasMany(Label::class);
     }
 }

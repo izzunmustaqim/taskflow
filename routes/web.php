@@ -33,10 +33,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/tasks/bulk-restore', [TaskController::class, 'bulkRestore'])->name('tasks.bulk-restore');
     Route::post('/tasks/bulk-force-delete', [TaskController::class, 'bulkForceDestroy'])->name('tasks.bulk-force-delete');
 
+    // Reorder
+    Route::post('/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
+
     Route::resource('tasks', TaskController::class);
 
     // Categories
     Route::resource('categories', CategoryController::class)->except(['show']);
+
+    // Labels
+    Route::resource('labels', \App\Http\Controllers\LabelController::class)->except(['show']);
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
