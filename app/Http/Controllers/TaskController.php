@@ -114,7 +114,7 @@ final class TaskController extends Controller
 
         $this->taskService->delete($task);
 
-        return redirect()->back()
+        return redirect()->route('tasks.index')
             ->with('success', 'Task moved to trash.');
     }
 

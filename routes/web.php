@@ -36,6 +36,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Reorder
     Route::post('/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
 
+    // Export
+    Route::get('/tasks/export/csv', [\App\Http\Controllers\ExportController::class, 'exportTasksCsv'])->name('tasks.export.csv');
+
+    // Import
+    Route::post('/tasks/import/csv', [\App\Http\Controllers\ImportController::class, 'importTasksCsv'])->name('tasks.import.csv');
+    Route::get('/tasks/import/errors', [\App\Http\Controllers\ImportController::class, 'getImportErrors'])->name('tasks.import.errors');
+
     // Attachments
     Route::post('/tasks/{task}/attachments', [\App\Http\Controllers\AttachmentController::class, 'store'])->name('tasks.attachments.store');
     Route::get('/attachments/{attachment}/download', [\App\Http\Controllers\AttachmentController::class, 'download'])->name('attachments.download');

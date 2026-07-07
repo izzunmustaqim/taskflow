@@ -86,6 +86,8 @@ Implementation tasks for the Task Management Application. Claude can read this f
 - [x] Write Task CRUD tests (10 tests)
 - [x] Write Category CRUD tests (8 tests)
 - [x] Write Profile tests
+- [x] Write Export tests (16 tests)
+- [x] Write Import tests (20 tests)
 - [x] Verify all tests pass
 
 ---
@@ -126,9 +128,9 @@ Implementation tasks for the Task Management Application. Claude can read this f
 - [x] Add reminder system
 
 ### Phase 14: Export & Import
-- [ ] Add CSV export for tasks
+- [x] Add CSV export for tasks
 - [ ] Add PDF export for tasks
-- [ ] Add CSV import for tasks
+- [x] Add CSV import for tasks
 - [ ] Add data backup/restore
 
 ### Phase 15: API Development

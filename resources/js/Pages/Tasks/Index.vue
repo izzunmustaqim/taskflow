@@ -81,6 +81,13 @@ const showBulkDeleteModal = ref(false);
 const bulkStatusValue = ref('');
 const isProcessing = ref(false);
 
+// Import modal state
+const showImportModal = ref(false);
+const importFile = ref<File | null>(null);
+const fileInput = ref<HTMLInputElement | null>(null);
+const importErrors = ref<string[]>([]);
+const isImporting = ref(false);
+
 const hasSelection = computed(() => selectedIds.value.size > 0);
 const selectedCount = computed(() => selectedIds.value.size);
 
@@ -151,6 +158,49 @@ const executeBulkDelete = () => {
             clearSelection();
         },
     });
+};
+
+// Import functions
+const handleFileSelect = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    if (target.files && target.files.length > 0) {
+        importFile.value = target.files[0];
+        importErrors.value = [];
+    }
+};
+
+const submitImport = () => {
+    if (!importFile.value) return;
+
+    isImporting.value = true;
+    importErrors.value = [];
+
+    const formData = new FormData();
+    formData.append('csv_file', importFile.value);
+
+    router.post(route('tasks.import.csv'), formData, {
+        forceFormData: true,
+        onSuccess: () => {
+            showImportModal.value = false;
+            importFile.value = null;
+        },
+        onError: (errors) => {
+            if (errors.csv_file) {
+                importErrors.value = [errors.csv_file];
+            } else {
+                importErrors.value = Object.values(errors);
+            }
+        },
+        onFinish: () => {
+            isImporting.value = false;
+        },
+    });
+};
+
+const closeImportModal = () => {
+    showImportModal.value = false;
+    importFile.value = null;
+    importErrors.value = [];
 };
 
 const clearFilters = () => {
@@ -249,6 +299,18 @@ onUnmounted(() => {
                         </svg>
                         <span class="hidden sm:inline">Trash</span>
                     </Link>
+                    <a :href="route('tasks.export.csv', { status: status, priority: priority, category_id: category_id, label_id: label_id, search: search, due: due })" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                        </svg>
+                        <span class="hidden sm:inline">Export CSV</span>
+                    </a>
+                    <button @click="showImportModal = true" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                        </svg>
+                        <span class="hidden sm:inline">Import CSV</span>
+                    </button>
                     <Link :href="route('tasks.create')" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-500 font-semibold rounded-xl transition-all shadow-sm hover:shadow-md">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -264,7 +326,7 @@ onUnmounted(() => {
                 
                 <!-- Filters -->
                 <div class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border border-gray-100 dark:border-gray-700 rounded-2xl p-6 shadow-sm mb-8">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
                         <!-- Search -->
                         <div class="lg:col-span-2 relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -541,5 +603,95 @@ onUnmounted(() => {
             @cancel="showBulkDeleteModal = false"
             @confirm="executeBulkDelete"
         />
+
+        <!-- Import CSV Modal -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="ease-out duration-200"
+                enter-from-class="opacity-0"
+                enter-to-class="opacity-100"
+                leave-active-class="ease-in duration-150"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+            >
+                <div v-if="showImportModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden p-4 sm:p-0" role="dialog" aria-modal="true">
+                    <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" @click="closeImportModal"></div>
+                    <Transition
+                        enter-active-class="ease-out duration-200"
+                        enter-from-class="opacity-0 scale-95 translate-y-4"
+                        enter-to-class="opacity-100 scale-100 translate-y-0"
+                        leave-active-class="ease-in duration-150"
+                        leave-from-class="opacity-100 scale-100 translate-y-0"
+                        leave-to-class="opacity-0 scale-95 translate-y-4"
+                    >
+                        <div v-if="showImportModal" class="relative w-full max-w-lg transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all sm:my-8 border border-gray-100 dark:border-gray-700">
+                            <div class="flex items-start gap-4">
+                                <div class="shrink-0 rounded-full p-2.5 flex items-center justify-center bg-indigo-100 dark:bg-indigo-900/30">
+                                    <svg class="h-6 w-6 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                                    </svg>
+                                </div>
+                                <div class="pt-0.5 w-full">
+                                    <h3 class="text-lg font-semibold leading-6 text-gray-900 dark:text-white">Import Tasks from CSV</h3>
+                                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                        Upload a CSV file to import tasks. The file should have columns: title, description, status, priority, category, due date, labels.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="mt-6">
+                                <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center hover:border-indigo-400 dark:hover:border-indigo-500 transition-colors">
+                                    <input
+                                        type="file"
+                                        accept=".csv,.txt"
+                                        class="hidden"
+                                        ref="fileInput"
+                                        @change="handleFileSelect"
+                                    />
+                                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                                    </svg>
+                                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                        <button type="button" @click="fileInput?.click()" class="font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400">
+                                            Click to select file
+                                        </button>
+                                        or drag and drop
+                                    </p>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">CSV files up to 10MB</p>
+                                    <p v-if="importFile" class="mt-3 text-sm text-indigo-600 dark:text-indigo-400 font-medium">
+                                        {{ importFile.name }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div v-if="importErrors.length > 0" class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                                <p class="text-sm font-medium text-red-800 dark:text-red-400">Import Errors:</p>
+                                <ul class="mt-2 text-xs text-red-700 dark:text-red-300 list-disc list-inside">
+                                    <li v-for="(error, index) in importErrors" :key="index">{{ error }}</li>
+                                </ul>
+                            </div>
+
+                            <div class="mt-6 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    class="inline-flex justify-center rounded-xl bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                    @click="closeImportModal"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    class="inline-flex justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    :disabled="!importFile || isImporting"
+                                    @click="submitImport"
+                                >
+                                    {{ isImporting ? 'Importing...' : 'Import Tasks' }}
+                                </button>
+                            </div>
+                        </div>
+                    </Transition>
+                </div>
+            </Transition>
+        </Teleport>
     </AuthenticatedLayout>
 </template>

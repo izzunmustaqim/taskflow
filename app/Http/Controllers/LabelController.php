@@ -47,7 +47,7 @@ final class LabelController extends Controller
         /** @var \App\Models\User $user */
         $user = $request->user();
 
-        $this->labelService->create($user, $request->validatedData());
+        $this->labelService->create($user, $request->validated());
 
         return redirect()->route('labels.index')
             ->with('success', 'Label created successfully.');
@@ -66,7 +66,7 @@ final class LabelController extends Controller
     {
         Gate::authorize('update', $label);
 
-        $this->labelService->update($label, $request->validatedData());
+        $this->labelService->update($label, $request->validated());
 
         return redirect()->route('labels.index')
             ->with('success', 'Label updated successfully.');
