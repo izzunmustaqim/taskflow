@@ -88,6 +88,7 @@ Implementation tasks for the Task Management Application. Claude can read this f
 - [x] Write Profile tests
 - [x] Write Export tests (43 tests)
 - [x] Write Import tests (20 tests)
+- [x] Write Security tests (9 tests)
 - [x] Verify all tests pass
 
 ---
@@ -149,13 +150,13 @@ Implementation tasks for the Task Management Application. Claude can read this f
 - [ ] Implement virtual scrolling for large lists
 
 ### Phase 17: Security Hardening
-- [ ] Add CSRF protection verification
-- [ ] Implement rate limiting on auth routes
-- [ ] Add input sanitization
-- [ ] Add SQL injection prevention checks
-- [ ] Add XSS prevention checks
-- [ ] Implement Content Security Policy headers
-- [ ] Add audit logging for security events
+- [x] Add CSRF protection verification
+- [x] Implement rate limiting on auth routes
+- [x] Add input sanitization
+- [x] Add SQL injection prevention checks
+- [x] Add XSS prevention checks
+- [x] Implement Content Security Policy headers
+- [x] Add audit logging for security events
 
 ### Phase 18: DevOps
 - [ ] Set up CI/CD pipeline (GitHub Actions)

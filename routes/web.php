@@ -41,11 +41,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tasks/export/pdf', [\App\Http\Controllers\ExportController::class, 'exportTasksPdf'])->name('tasks.export.pdf');
 
     // Backup & Restore
-    Route::get('/tasks/backup', [\App\Http\Controllers\ExportController::class, 'exportBackup'])->name('tasks.backup');
-    Route::post('/tasks/restore', [\App\Http\Controllers\ExportController::class, 'restoreBackup'])->name('tasks.restore-backup');
+    Route::get('/tasks/backup', [\App\Http\Controllers\ExportController::class, 'exportBackup'])
+        ->name('tasks.backup')
+        ->middleware('throttle:10,1'); // 10 downloads per minute
+
+    Route::post('/tasks/restore', [\App\Http\Controllers\ExportController::class, 'restoreBackup'])
+        ->name('tasks.restore-backup')
+        ->middleware('throttle:5,1'); // 5 restores per minute
 
     // Import
-    Route::post('/tasks/import/csv', [\App\Http\Controllers\ImportController::class, 'importTasksCsv'])->name('tasks.import.csv');
+    Route::post('/tasks/import/csv', [\App\Http\Controllers\ImportController::class, 'importTasksCsv'])
+        ->name('tasks.import.csv')
+        ->middleware('throttle:5,1'); // 5 imports per minute
+
     Route::get('/tasks/import/errors', [\App\Http\Controllers\ImportController::class, 'getImportErrors'])->name('tasks.import.errors');
 
     // Attachments
