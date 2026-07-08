@@ -24,8 +24,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         ]);
 
-        // Configure rate limiters
-        $middleware->throttleWithRedis();
+        // Note: throttleWithRedis() requires Redis/Memcached cache stores.
+        // Using database cache store, so standard throttle is used instead.
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

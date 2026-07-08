@@ -15,7 +15,7 @@ final class LabelService
 
     private function clearUserCache(User $user): void
     {
-        Cache::tags(["user:{$user->id}:labels"])->flush();
+        Cache::forget("user:{$user->id}:labels:list");
     }
 
     /**
@@ -25,7 +25,7 @@ final class LabelService
      */
     public function list(User $user): \Illuminate\Database\Eloquent\Collection
     {
-        return Cache::tags(["user:{$user->id}:labels"])->remember(
+        return Cache::remember(
             "user:{$user->id}:labels:list",
             self::CACHE_TTL,
             function () use ($user): \Illuminate\Database\Eloquent\Collection {

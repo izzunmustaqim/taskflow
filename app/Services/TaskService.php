@@ -26,7 +26,9 @@ final class TaskService
 
     private function clearUserCache(User $user): void
     {
-        Cache::tags(["user:{$user->id}:tasks"])->flush();
+        Cache::forget($this->cacheKey($user, 'stats'));
+        Cache::forget($this->cacheKey($user, 'recent:5'));
+        Cache::forget($this->cacheKey($user, 'recent:10'));
     }
 
     /**
@@ -279,7 +281,7 @@ final class TaskService
      */
     public function getStats(User $user): array
     {
-        return Cache::tags(["user:{$user->id}:tasks"])->remember(
+        return Cache::remember(
             $this->cacheKey($user, 'stats'),
             self::CACHE_TTL,
             function () use ($user): array {
@@ -326,7 +328,7 @@ final class TaskService
      */
     public function getRecent(User $user, int $limit = 5): Collection
     {
-        return Cache::tags(["user:{$user->id}:tasks"])->remember(
+        return Cache::remember(
             $this->cacheKey($user, "recent:{$limit}"),
             self::CACHE_TTL,
             function () use ($user, $limit): Collection {

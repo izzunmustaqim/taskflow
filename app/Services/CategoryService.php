@@ -15,7 +15,7 @@ final class CategoryService
 
     private function clearUserCache(User $user): void
     {
-        Cache::tags(["user:{$user->id}:categories"])->flush();
+        Cache::forget("user:{$user->id}:categories:list");
     }
 
     /**
@@ -25,7 +25,7 @@ final class CategoryService
      */
     public function list(User $user): Collection
     {
-        return Cache::tags(["user:{$user->id}:categories"])->remember(
+        return Cache::remember(
             "user:{$user->id}:categories:list",
             self::CACHE_TTL,
             function () use ($user): Collection {
