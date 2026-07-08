@@ -159,9 +159,9 @@ Implementation tasks for the Task Management Application. Claude can read this f
 - [x] Add audit logging for security events
 
 ### Phase 18: DevOps
-- [ ] Set up CI/CD pipeline (GitHub Actions)
-- [ ] Add automated testing in CI
-- [ ] Add code quality checks (PHPStan, Pint)
+- [x] Set up CI/CD pipeline (GitHub Actions)
+- [x] Add automated testing in CI
+- [x] Add code quality checks (PHPStan, Pint)
 - [ ] Set up staging environment
 - [ ] Configure production database backups
 - [ ] Add monitoring and alerting
