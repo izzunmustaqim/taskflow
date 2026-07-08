@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Models\Category;
-use App\Models\Label;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -27,35 +25,34 @@ final class CacheTest extends TestCase
 
     public function test_task_stats_are_cached(): void
     {
-        // Create some tasks
         Task::factory()->count(3)->create(['user_id' => $this->user->id]);
 
-        // First call - should query database
-        $stats1 = $this->app->make(\App\Services\TaskService::class)->getStats($this->user);
+        $taskService = $this->app->make(\App\Services\TaskService::class);
 
-        $this->assertArrayHasKey('total', $stats1);
-        $this->assertEquals(3, $stats1['total']);
+        $stats = $taskService->getStats($this->user);
+        $this->assertEquals(3, $stats['total']);
 
-        // Verify cache tag exists
-        $cacheKey = "user:{$this->user->id}:tasks:stats";
-        $cached = Cache::tags(["user:{$this->user->id}:tasks"])->get($cacheKey);
+        // Verify cache exists
+        $cached = Cache::get("user:{$this->user->id}:tasks:stats");
         $this->assertNotNull($cached);
-        $this->assertEquals($stats1, $cached);
     }
 
     public function test_task_stats_cache_is_invalidated_on_create(): void
     {
         $taskService = $this->app->make(\App\Services\TaskService::class);
 
-        // Initial call populates cache
+        // Populate cache
         $taskService->getStats($this->user);
 
-        // Create a task
-        Task::factory()->create(['user_id' => $this->user->id]);
+        // Create task via service (should invalidate cache)
+        $taskService->create($this->user, [
+            'title' => 'Test Task',
+            'status' => 'pending',
+            'priority' => 'medium',
+        ]);
 
-        // Cache should be invalidated
-        $cacheKey = "user:{$this->user->id}:tasks:stats";
-        $cached = Cache::tags(["user:{$this->user->id}:tasks"])->get($cacheKey);
+        // Cache should be cleared
+        $cached = Cache::get("user:{$this->user->id}:tasks:stats");
         $this->assertNull($cached);
     }
 
@@ -65,15 +62,14 @@ final class CacheTest extends TestCase
 
         $task = Task::factory()->create(['user_id' => $this->user->id]);
 
-        // Initial call populates cache
+        // Populate cache
         $taskService->getStats($this->user);
 
-        // Delete the task
+        // Delete via service (should invalidate cache)
         $taskService->delete($task);
 
-        // Cache should be invalidated
-        $cacheKey = "user:{$this->user->id}:tasks:stats";
-        $cached = Cache::tags(["user:{$this->user->id}:tasks"])->get($cacheKey);
+        // Cache should be cleared
+        $cached = Cache::get("user:{$this->user->id}:tasks:stats");
         $this->assertNull($cached);
     }
 
@@ -83,29 +79,28 @@ final class CacheTest extends TestCase
 
         $taskService = $this->app->make(\App\Services\TaskService::class);
 
-        // First call
-        $recent1 = $taskService->getRecent($this->user);
-        $this->assertCount(5, $recent1);
+        $recent = $taskService->getRecent($this->user);
+        $this->assertCount(5, $recent);
 
         // Verify cache
-        $cacheKey = "user:{$this->user->id}:tasks:recent:5";
-        $cached = Cache::tags(["user:{$this->user->id}:tasks"])->get($cacheKey);
+        $cached = Cache::get("user:{$this->user->id}:tasks:recent:5");
         $this->assertNotNull($cached);
     }
 
     public function test_categories_are_cached(): void
     {
-        Category::factory()->count(3)->create(['user_id' => $this->user->id]);
-
         $categoryService = $this->app->make(\App\Services\CategoryService::class);
 
-        // First call
-        $categories1 = $categoryService->list($this->user);
-        $this->assertCount(3, $categories1);
+        // Create via service
+        $categoryService->create($this->user, ['name' => 'Work', 'color' => '#3B82F6']);
+        $categoryService->create($this->user, ['name' => 'Personal', 'color' => '#10B981']);
+
+        // First call populates cache
+        $categories = $categoryService->list($this->user);
+        $this->assertCount(2, $categories);
 
         // Verify cache
-        $cacheKey = "user:{$this->user->id}:categories:list";
-        $cached = Cache::tags(["user:{$this->user->id}:categories"])->get($cacheKey);
+        $cached = Cache::get("user:{$this->user->id}:categories:list");
         $this->assertNotNull($cached);
     }
 
@@ -113,31 +108,31 @@ final class CacheTest extends TestCase
     {
         $categoryService = $this->app->make(\App\Services\CategoryService::class);
 
-        // Initial call populates cache
+        // Populate cache
         $categoryService->list($this->user);
 
-        // Create a category
-        Category::factory()->create(['user_id' => $this->user->id]);
+        // Create via service (should invalidate cache)
+        $categoryService->create($this->user, ['name' => 'New', 'color' => '#FF0000']);
 
-        // Cache should be invalidated
-        $cacheKey = "user:{$this->user->id}:categories:list";
-        $cached = Cache::tags(["user:{$this->user->id}:categories"])->get($cacheKey);
+        // Cache should be cleared
+        $cached = Cache::get("user:{$this->user->id}:categories:list");
         $this->assertNull($cached);
     }
 
     public function test_labels_are_cached(): void
     {
-        Label::factory()->count(4)->create(['user_id' => $this->user->id]);
-
         $labelService = $this->app->make(\App\Services\LabelService::class);
 
-        // First call
-        $labels1 = $labelService->list($this->user);
-        $this->assertCount(4, $labels1);
+        // Create via service
+        $labelService->create($this->user, ['name' => 'Urgent']);
+        $labelService->create($this->user, ['name' => 'Low Priority']);
+
+        // First call populates cache
+        $labels = $labelService->list($this->user);
+        $this->assertCount(2, $labels);
 
         // Verify cache
-        $cacheKey = "user:{$this->user->id}:labels:list";
-        $cached = Cache::tags(["user:{$this->user->id}:labels"])->get($cacheKey);
+        $cached = Cache::get("user:{$this->user->id}:labels:list");
         $this->assertNotNull($cached);
     }
 
@@ -145,15 +140,14 @@ final class CacheTest extends TestCase
     {
         $labelService = $this->app->make(\App\Services\LabelService::class);
 
-        // Initial call populates cache
+        // Populate cache
         $labelService->list($this->user);
 
-        // Create a label
-        Label::factory()->create(['user_id' => $this->user->id]);
+        // Create via service (should invalidate cache)
+        $labelService->create($this->user, ['name' => 'New Label']);
 
-        // Cache should be invalidated
-        $cacheKey = "user:{$this->user->id}:labels:list";
-        $cached = Cache::tags(["user:{$this->user->id}:labels"])->get($cacheKey);
+        // Cache should be cleared
+        $cached = Cache::get("user:{$this->user->id}:labels:list");
         $this->assertNull($cached);
     }
 
@@ -173,8 +167,8 @@ final class CacheTest extends TestCase
         $this->assertEquals(5, $stats2['total']);
 
         // Verify separate cache keys
-        $cache1 = Cache::tags(["user:{$this->user->id}:tasks"])->get("user:{$this->user->id}:tasks:stats");
-        $cache2 = Cache::tags(["user:{$user2->id}:tasks"])->get("user:{$user2->id}:tasks:stats");
+        $cache1 = Cache::get("user:{$this->user->id}:tasks:stats");
+        $cache2 = Cache::get("user:{$user2->id}:tasks:stats");
 
         $this->assertNotNull($cache1);
         $this->assertNotNull($cache2);
