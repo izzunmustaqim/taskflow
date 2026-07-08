@@ -28,7 +28,7 @@ final class TaskService
     {
         Cache::tags(["user:{$user->id}:tasks"])->flush();
     }
-{
+
     /**
      * List paginated tasks for a user with optional filters.
      *
