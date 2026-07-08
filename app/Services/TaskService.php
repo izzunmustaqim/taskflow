@@ -12,9 +12,22 @@ use App\Models\Task;
 use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 final class TaskService
+{
+    private const CACHE_TTL = 300; // 5 minutes
+
+    private function cacheKey(User $user, string $suffix): string
+    {
+        return "user:{$user->id}:tasks:{$suffix}";
+    }
+
+    private function clearUserCache(User $user): void
+    {
+        Cache::tags(["user:{$user->id}:tasks"])->flush();
+    }
 {
     /**
      * List paginated tasks for a user with optional filters.
@@ -130,6 +143,7 @@ final class TaskService
             }
 
             $this->logActivity($user, $task, 'created');
+            $this->clearUserCache($user);
 
             return $task->load(['category', 'labels', 'attachments']);
         });
@@ -215,6 +229,8 @@ final class TaskService
                 );
             }
 
+            $this->clearUserCache($task->user);
+
             return $task->fresh(['category', 'labels', 'attachments']) ?? $task;
         });
     }
@@ -225,6 +241,7 @@ final class TaskService
     public function delete(Task $task): bool
     {
         $this->logActivity($task->user, $task, 'deleted');
+        $this->clearUserCache($task->user);
 
         return (bool) $task->delete();
     }
@@ -238,6 +255,7 @@ final class TaskService
 
         if ($result) {
             $this->logActivity($task->user, $task, 'restored');
+            $this->clearUserCache($task->user);
         }
 
         return $result;
@@ -249,6 +267,7 @@ final class TaskService
     public function forceDelete(Task $task): bool
     {
         $this->logActivity($task->user, $task, 'force_deleted');
+        $this->clearUserCache($task->user);
 
         return (bool) $task->forceDelete();
     }
@@ -260,38 +279,44 @@ final class TaskService
      */
     public function getStats(User $user): array
     {
-        $baseCounts = Task::query()
-            ->forUser($user)
-            ->selectRaw("
-                COUNT(*) as total,
-                COUNT(CASE WHEN status = ? THEN 1 END) as pending,
-                COUNT(CASE WHEN status = ? THEN 1 END) as in_progress,
-                COUNT(CASE WHEN status = ? THEN 1 END) as completed
-            ", [
-                TaskStatus::Pending->value,
-                TaskStatus::InProgress->value,
-                TaskStatus::Completed->value,
-            ])
-            ->first();
+        return Cache::tags(["user:{$user->id}:tasks"])->remember(
+            $this->cacheKey($user, 'stats'),
+            self::CACHE_TTL,
+            function () use ($user): array {
+                $baseCounts = Task::query()
+                    ->forUser($user)
+                    ->selectRaw("
+                        COUNT(*) as total,
+                        COUNT(CASE WHEN status = ? THEN 1 END) as pending,
+                        COUNT(CASE WHEN status = ? THEN 1 END) as in_progress,
+                        COUNT(CASE WHEN status = ? THEN 1 END) as completed
+                    ", [
+                        TaskStatus::Pending->value,
+                        TaskStatus::InProgress->value,
+                        TaskStatus::Completed->value,
+                    ])
+                    ->first();
 
-        $overdue = Task::query()
-            ->forUser($user)
-            ->overdue()
-            ->count();
+                $overdue = Task::query()
+                    ->forUser($user)
+                    ->overdue()
+                    ->count();
 
-        $dueSoon = Task::query()
-            ->forUser($user)
-            ->dueSoon()
-            ->count();
+                $dueSoon = Task::query()
+                    ->forUser($user)
+                    ->dueSoon()
+                    ->count();
 
-        return [
-            'total' => (int) ($baseCounts?->total ?? 0),
-            'pending' => (int) ($baseCounts?->pending ?? 0),
-            'in_progress' => (int) ($baseCounts?->in_progress ?? 0),
-            'completed' => (int) ($baseCounts?->completed ?? 0),
-            'overdue' => $overdue,
-            'due_soon' => $dueSoon,
-        ];
+                return [
+                    'total' => (int) ($baseCounts?->total ?? 0),
+                    'pending' => (int) ($baseCounts?->pending ?? 0),
+                    'in_progress' => (int) ($baseCounts?->in_progress ?? 0),
+                    'completed' => (int) ($baseCounts?->completed ?? 0),
+                    'overdue' => $overdue,
+                    'due_soon' => $dueSoon,
+                ];
+            }
+        );
     }
 
     /**
@@ -301,12 +326,18 @@ final class TaskService
      */
     public function getRecent(User $user, int $limit = 5): Collection
     {
-        return Task::query()
-            ->forUser($user)
-            ->with('category')
-            ->latest('created_at')
-            ->limit($limit)
-            ->get();
+        return Cache::tags(["user:{$user->id}:tasks"])->remember(
+            $this->cacheKey($user, "recent:{$limit}"),
+            self::CACHE_TTL,
+            function () use ($user, $limit): Collection {
+                return Task::query()
+                    ->forUser($user)
+                    ->with('category')
+                    ->latest('created_at')
+                    ->limit($limit)
+                    ->get();
+            }
+        );
     }
 
     /**

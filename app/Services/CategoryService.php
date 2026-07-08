@@ -7,9 +7,17 @@ namespace App\Services;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Cache;
 
 final class CategoryService
 {
+    private const CACHE_TTL = 600; // 10 minutes
+
+    private function clearUserCache(User $user): void
+    {
+        Cache::tags(["user:{$user->id}:categories"])->flush();
+    }
+
     /**
      * List all categories for a user.
      *
@@ -17,10 +25,16 @@ final class CategoryService
      */
     public function list(User $user): Collection
     {
-        return Category::query()
-            ->forUser($user)
-            ->orderBy('name')
-            ->get();
+        return Cache::tags(["user:{$user->id}:categories"])->remember(
+            "user:{$user->id}:categories:list",
+            self::CACHE_TTL,
+            function () use ($user): Collection {
+                return Category::query()
+                    ->forUser($user)
+                    ->orderBy('name')
+                    ->get();
+            }
+        );
     }
 
     /**
@@ -32,6 +46,8 @@ final class CategoryService
     {
         /** @var Category $category */
         $category = $user->categories()->create($data);
+
+        $this->clearUserCache($user);
 
         return $category;
     }
@@ -45,6 +61,8 @@ final class CategoryService
     {
         $category->update($data);
 
+        $this->clearUserCache($category->user);
+
         return $category;
     }
 
@@ -53,6 +71,8 @@ final class CategoryService
      */
     public function delete(Category $category): bool
     {
+        $this->clearUserCache($category->user);
+
         return (bool) $category->delete();
     }
 }
