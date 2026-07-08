@@ -181,6 +181,18 @@ tests/Feature/       # Pest PHP feature tests
   - Creates tasks with categories and labels
   - Returns validation errors for invalid rows
 
+### Data Backup & Restore
+- **Backup Route:** `GET /tasks/backup`
+- **Restore Route:** `POST /tasks/restore`
+- **Controller:** `ExportController@exportBackup`, `ExportController@restoreBackup`
+- **Features:**
+  - Exports all user data (tasks, categories, labels) as JSON
+  - Backup includes version info and timestamp
+  - Restore creates new records (doesn't replace existing)
+  - Handles ID remapping between backup and new records
+  - Validates JSON format and backup structure
+  - Supports partial restores (only tasks, or tasks + categories, etc.)
+
 ### Testing Export Features
 ```bash
 # Run all export tests
@@ -191,4 +203,8 @@ php artisan test --filter="pdf export"
 
 # Run specific CSV export tests
 php artisan test --filter="csv export"
+
+# Run backup/restore tests
+php artisan test --filter="backup"
+php artisan test --filter="restore"
 ```
