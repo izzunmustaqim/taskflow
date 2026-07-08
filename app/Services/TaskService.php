@@ -328,7 +328,8 @@ final class TaskService
      */
     public function getRecent(User $user, int $limit = 5): Collection
     {
-        return Cache::remember(
+        /** @var Collection<int, Task> $tasks */
+        $tasks = Cache::remember(
             $this->cacheKey($user, "recent:{$limit}"),
             self::CACHE_TTL,
             function () use ($user, $limit): Collection {
@@ -340,6 +341,8 @@ final class TaskService
                     ->get();
             }
         );
+
+        return $tasks;
     }
 
     /**

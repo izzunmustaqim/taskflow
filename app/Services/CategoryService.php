@@ -25,7 +25,8 @@ final class CategoryService
      */
     public function list(User $user): Collection
     {
-        return Cache::remember(
+        /** @var Collection<int, Category> $categories */
+        $categories = Cache::remember(
             "user:{$user->id}:categories:list",
             self::CACHE_TTL,
             function () use ($user): Collection {
@@ -35,6 +36,8 @@ final class CategoryService
                     ->get();
             }
         );
+
+        return $categories;
     }
 
     /**
