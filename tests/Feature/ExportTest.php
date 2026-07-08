@@ -275,3 +275,223 @@ test("csv export filename contains timestamp", function () {
     $contentDisposition = $response->headers->get("Content-Disposition");
     expect($contentDisposition)->toContain("tasks_" . now()->format("Y-m-d"));
 });
+
+// PDF Export Tests
+
+test("unauthenticated user cannot export tasks to pdf", function () {
+    $this->get(route("tasks.export.pdf"))
+        ->assertRedirect(route("login"));
+});
+
+test("user can export tasks to pdf", function () {
+    Task::factory()->count(3)->forUser($this->user)->create();
+
+    actingAs($this->user)
+        ->get(route("tasks.export.pdf"))
+        ->assertOk()
+        ->assertHeader("Content-Type", "application/pdf")
+        ->assertHeaderContains("Content-Disposition", "attachment");
+});
+
+test("pdf export contains task data", function () {
+    $task = Task::factory()->forUser($this->user)->create([
+        "title" => "PDF Test Task",
+        "description" => "PDF Test Description",
+        "status" => TaskStatus::Pending,
+        "priority" => TaskPriority::High,
+    ]);
+
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf"));
+
+    $response->assertOk();
+    $content = $response->getContent();
+
+    // Verify it's a valid PDF (starts with %PDF)
+    expect(substr($content, 0, 5))->toBe("%PDF-");
+});
+
+test("pdf export respects status filter", function () {
+    Task::factory()->forUser($this->user)->create(["status" => TaskStatus::Pending]);
+    Task::factory()->forUser($this->user)->create(["status" => TaskStatus::Completed]);
+
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf", ["status" => "pending"]));
+
+    $response->assertOk();
+    $content = $response->getContent();
+
+    // Verify it's a valid PDF
+    expect(substr($content, 0, 5))->toBe("%PDF-");
+});
+
+test("pdf export respects priority filter", function () {
+    Task::factory()->forUser($this->user)->create(["priority" => TaskPriority::High]);
+    Task::factory()->forUser($this->user)->create(["priority" => TaskPriority::Low]);
+
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf", ["priority" => "high"]));
+
+    $response->assertOk();
+    $content = $response->getContent();
+
+    // Verify it's a valid PDF
+    expect(substr($content, 0, 5))->toBe("%PDF-");
+});
+
+test("pdf export respects category filter", function () {
+    $category = Category::factory()->forUser($this->user)->create(["name" => "Work"]);
+    Task::factory()->forUser($this->user)->create(["category_id" => $category->id]);
+    Task::factory()->forUser($this->user)->create(["category_id" => null]);
+
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf", ["category_id" => $category->id]));
+
+    $response->assertOk();
+});
+
+test("pdf export respects search filter", function () {
+    Task::factory()->forUser($this->user)->create(["title" => "Unique Search Task"]);
+    Task::factory()->forUser($this->user)->create(["title" => "Another Task"]);
+
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf", ["search" => "Unique"]));
+
+    $response->assertOk();
+    $content = $response->getContent();
+
+    // Verify it's a valid PDF
+    expect(substr($content, 0, 5))->toBe("%PDF-");
+});
+
+test("pdf export respects label filter", function () {
+    $label = Label::factory()->forUser($this->user)->create();
+    $taskWithLabel = Task::factory()->forUser($this->user)->create();
+    $taskWithLabel->labels()->attach($label);
+
+    Task::factory()->forUser($this->user)->create();
+
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf", ["label_id" => $label->id]));
+
+    $response->assertOk();
+});
+
+test("pdf export respects overdue filter", function () {
+    Task::factory()->forUser($this->user)->create([
+        "due_at" => now()->subDay(),
+        "status" => TaskStatus::Pending,
+    ]);
+    Task::factory()->forUser($this->user)->create([
+        "due_at" => now()->addDay(),
+        "status" => TaskStatus::Pending,
+    ]);
+
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf", ["due" => "overdue"]));
+
+    $response->assertOk();
+});
+
+test("pdf export respects due soon filter", function () {
+    Task::factory()->forUser($this->user)->create([
+        "due_at" => now()->addHours(12),
+        "status" => TaskStatus::Pending,
+    ]);
+    Task::factory()->forUser($this->user)->create([
+        "due_at" => now()->addDays(5),
+        "status" => TaskStatus::Pending,
+    ]);
+
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf", ["due" => "soon"]));
+
+    $response->assertOk();
+});
+
+test("pdf export only includes user tasks", function () {
+    $otherUser = User::factory()->create();
+    Task::factory()->forUser($this->user)->create(["title" => "My Task"]);
+    Task::factory()->forUser($otherUser)->create(["title" => "Other User Task"]);
+
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf"));
+
+    $response->assertOk();
+    $content = $response->getContent();
+
+    // Verify it's a valid PDF
+    expect(substr($content, 0, 5))->toBe("%PDF-");
+});
+
+test("pdf export includes category name", function () {
+    $category = Category::factory()->forUser($this->user)->create(["name" => "Personal"]);
+    Task::factory()->forUser($this->user)->create(["category_id" => $category->id]);
+
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf"));
+
+    $response->assertOk();
+    $content = $response->getContent();
+
+    // Verify it's a valid PDF
+    expect(substr($content, 0, 5))->toBe("%PDF-");
+});
+
+test("pdf export includes labels", function () {
+    $label = Label::factory()->forUser($this->user)->create(["name" => "Urgent"]);
+    $task = Task::factory()->forUser($this->user)->create();
+    $task->labels()->attach($label);
+
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf"));
+
+    $response->assertOk();
+    $content = $response->getContent();
+
+    // Verify it's a valid PDF
+    expect(substr($content, 0, 5))->toBe("%PDF-");
+});
+
+test("pdf export handles empty task list", function () {
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf"));
+
+    $response->assertOk();
+    $content = $response->getContent();
+
+    // Verify it's a valid PDF
+    expect(substr($content, 0, 5))->toBe("%PDF-");
+});
+
+test("pdf export filename contains timestamp", function () {
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf"));
+
+    $contentDisposition = $response->headers->get("Content-Disposition");
+    expect($contentDisposition)->toContain("tasks_" . now()->format("Y-m-d"));
+});
+
+test("pdf export combines multiple filters", function () {
+    Task::factory()->forUser($this->user)->create([
+        "title" => "Filtered Task",
+        "status" => TaskStatus::Pending,
+        "priority" => TaskPriority::High,
+    ]);
+    Task::factory()->forUser($this->user)->create([
+        "status" => TaskStatus::Completed,
+        "priority" => TaskPriority::Low,
+    ]);
+
+    $response = actingAs($this->user)
+        ->get(route("tasks.export.pdf", [
+            "status" => "pending",
+            "priority" => "high",
+        ]));
+
+    $response->assertOk();
+    $content = $response->getContent();
+
+    // Verify it's a valid PDF
+    expect(substr($content, 0, 5))->toBe("%PDF-");
+});

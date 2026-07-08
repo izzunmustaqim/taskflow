@@ -38,6 +38,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Export
     Route::get('/tasks/export/csv', [\App\Http\Controllers\ExportController::class, 'exportTasksCsv'])->name('tasks.export.csv');
+    Route::get('/tasks/export/pdf', [\App\Http\Controllers\ExportController::class, 'exportTasksPdf'])->name('tasks.export.pdf');
 
     // Import
     Route::post('/tasks/import/csv', [\App\Http\Controllers\ImportController::class, 'importTasksCsv'])->name('tasks.import.csv');

@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class ExportController extends Controller
@@ -65,6 +66,37 @@ final class ExportController extends Controller
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment',
         ]);
+    }
+
+    public function exportTasksPdf(Request $request): Response
+    {
+        /** @var \App\Models\User $user */
+        $user = $request->user();
+
+        $filters = $request->only(['status', 'priority', 'category_id', 'label_id', 'search', 'due']);
+        $tasks = $this->getFilteredTasks($user, $filters);
+
+        // Build filter description
+        $filterParts = [];
+        if (!empty($filters['status'])) {
+            $filterParts[] = 'Status: ' . ucfirst($filters['status']);
+        }
+        if (!empty($filters['priority'])) {
+            $filterParts[] = 'Priority: ' . ucfirst($filters['priority']);
+        }
+        if (!empty($filters['search'])) {
+            $filterParts[] = 'Search: ' . $filters['search'];
+        }
+        $filterDescription = !empty($filterParts) ? implode(', ', $filterParts) : '';
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('exports.tasks-pdf', [
+            'tasks' => $tasks,
+            'filters' => $filterDescription,
+        ]);
+
+        $filename = 'tasks_' . now()->format('Y-m-d_His') . '.pdf';
+
+        return $pdf->download($filename);
     }
 
     private function getFilteredTasks($user, array $filters)

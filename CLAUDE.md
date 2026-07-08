@@ -33,6 +33,7 @@ Controllers  →  Services  →  Models
 - **Vue Pages** (`resources/js/Pages/`) — Inertia page components, one per route.
 - **Vue Components** (`resources/js/Components/`) — Reusable UI components.
 - **Composables** (`resources/js/Composables/`) — Vue composition functions (`useDarkMode`, `useKeyboardShortcuts`).
+- **Export/Import** (`app/Http/Controllers/ExportController.php`, `ImportController.php`) — CSV and PDF export, CSV import functionality.
 
 ### Multi-Tenant Security (CRITICAL)
 
@@ -102,7 +103,7 @@ docker-compose exec app php artisan migrate
 app/
 ├── Enums/           # TaskStatus, TaskPriority
 ├── Http/
-│   ├── Controllers/ # TaskController, CategoryController, DashboardController
+│   ├── Controllers/ # TaskController, CategoryController, DashboardController, ExportController, ImportController
 │   ├── Middleware/   # HandleInertiaRequests
 │   └── Requests/    # StoreTaskRequest, UpdateTaskRequest, etc.
 ├── Models/          # Task, Category, User, ActivityLog
@@ -110,22 +111,28 @@ app/
 ├── Providers/       # AppServiceProvider
 └── Services/        # TaskService, CategoryService
 
-resources/js/
-├── Components/      # Reusable Vue components (badges, modals, buttons)
-├── Composables/     # useDarkMode, useKeyboardShortcuts
-├── Layouts/         # Authenticated, Guest
-└── Pages/           # Inertia page components
-    ├── Auth/        # Login, Register, ForgotPassword, etc.
-    ├── Categories/  # Index, Create, Edit
-    ├── Tasks/       # Index, Create, Edit, Trash
-    ├── Dashboard.vue
-    └── Welcome.vue
+resources/
+├── js/
+│   ├── Components/      # Reusable Vue components (badges, modals, buttons)
+│   ├── Composables/     # useDarkMode, useKeyboardShortcuts
+│   ├── Layouts/         # Authenticated, Guest
+│   └── Pages/           # Inertia page components
+│       ├── Auth/        # Login, Register, ForgotPassword, etc.
+│       ├── Categories/  # Index, Create, Edit
+│       ├── Tasks/       # Index, Create, Edit, Trash
+│       ├── Dashboard.vue
+│       └── Welcome.vue
+└── views/
+    └── exports/
+        └── tasks-pdf.blade.php  # PDF export template
 
 routes/
 ├── web.php          # Main routes (auth-protected)
 └── auth.php         # Authentication routes
 
 tests/Feature/       # Pest PHP feature tests
+    ├── ExportTest.php    # CSV & PDF export tests (32 tests)
+    └── ImportTest.php    # CSV import tests (20 tests)
 ```
 
 ## Testing Conventions
@@ -144,3 +151,44 @@ tests/Feature/       # Pest PHP feature tests
 - Flash messages are passed via `->with('success', '...')` and displayed by `FlashMessage.vue`.
 - Dark mode state is persisted in localStorage via `useDarkMode` composable.
 - Keyboard shortcuts are registered via `useKeyboardShortcuts` composable.
+
+## Export/Import Feature
+
+### PDF Export (barryvdh/laravel-dompdf)
+- **Route:** `GET /tasks/export/pdf`
+- **Controller:** `ExportController@exportTasksPdf`
+- **View:** `resources/views/exports/tasks-pdf.blade.php`
+- **Features:**
+  - Exports filtered tasks to PDF with styled table
+  - Supports all filters (status, priority, category, label, search, due)
+  - Color-coded status and priority badges
+  - Shows filter description at top of PDF
+  - Filename format: `tasks_YYYY-MM-DD_HHMMSS.pdf`
+
+### CSV Export
+- **Route:** `GET /tasks/export/csv`
+- **Controller:** `ExportController@exportTasksCsv`
+- **Features:**
+  - Streamed download for large datasets
+  - BOM prefix for Excel compatibility
+  - Supports all filters
+
+### CSV Import
+- **Route:** `POST /tasks/import/csv`
+- **Controller:** `ImportController@importTasksCsv`
+- **Features:**
+  - Validates CSV format and required columns
+  - Creates tasks with categories and labels
+  - Returns validation errors for invalid rows
+
+### Testing Export Features
+```bash
+# Run all export tests
+php artisan test --filter=ExportTest
+
+# Run specific PDF export tests
+php artisan test --filter="pdf export"
+
+# Run specific CSV export tests
+php artisan test --filter="csv export"
+```
