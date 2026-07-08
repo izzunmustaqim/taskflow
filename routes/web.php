@@ -40,6 +40,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/tasks/export/csv', [\App\Http\Controllers\ExportController::class, 'exportTasksCsv'])->name('tasks.export.csv');
     Route::get('/tasks/export/pdf', [\App\Http\Controllers\ExportController::class, 'exportTasksPdf'])->name('tasks.export.pdf');
 
+    // Backup & Restore
+    Route::get('/tasks/backup', [\App\Http\Controllers\ExportController::class, 'exportBackup'])->name('tasks.backup');
+    Route::post('/tasks/restore', [\App\Http\Controllers\ExportController::class, 'restoreBackup'])->name('tasks.restore-backup');
+
     // Import
     Route::post('/tasks/import/csv', [\App\Http\Controllers\ImportController::class, 'importTasksCsv'])->name('tasks.import.csv');
     Route::get('/tasks/import/errors', [\App\Http\Controllers\ImportController::class, 'getImportErrors'])->name('tasks.import.errors');

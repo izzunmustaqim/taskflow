@@ -88,6 +88,13 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const importErrors = ref<string[]>([]);
 const isImporting = ref(false);
 
+// Restore modal state
+const showRestoreModal = ref(false);
+const restoreFile = ref<File | null>(null);
+const restoreFileInput = ref<HTMLInputElement | null>(null);
+const restoreErrors = ref<string[]>([]);
+const isRestoring = ref(false);
+
 const hasSelection = computed(() => selectedIds.value.size > 0);
 const selectedCount = computed(() => selectedIds.value.size);
 
@@ -203,6 +210,49 @@ const closeImportModal = () => {
     importErrors.value = [];
 };
 
+// Restore functions
+const handleRestoreFileSelect = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    if (target.files && target.files.length > 0) {
+        restoreFile.value = target.files[0];
+        restoreErrors.value = [];
+    }
+};
+
+const submitRestore = () => {
+    if (!restoreFile.value) return;
+
+    isRestoring.value = true;
+    restoreErrors.value = [];
+
+    const formData = new FormData();
+    formData.append('backup_file', restoreFile.value);
+
+    router.post(route('tasks.restore-backup'), formData, {
+        forceFormData: true,
+        onSuccess: () => {
+            showRestoreModal.value = false;
+            restoreFile.value = null;
+        },
+        onError: (errors) => {
+            if (errors.backup_file) {
+                restoreErrors.value = [errors.backup_file];
+            } else {
+                restoreErrors.value = Object.values(errors);
+            }
+        },
+        onFinish: () => {
+            isRestoring.value = false;
+        },
+    });
+};
+
+const closeRestoreModal = () => {
+    showRestoreModal.value = false;
+    restoreFile.value = null;
+    restoreErrors.value = [];
+};
+
 const clearFilters = () => {
     search.value = '';
     status.value = '';
@@ -316,6 +366,18 @@ onUnmounted(() => {
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                         </svg>
                         <span class="hidden sm:inline">Import CSV</span>
+                    </button>
+                    <a :href="route('tasks.backup')" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                        </svg>
+                        <span class="hidden sm:inline">Backup</span>
+                    </a>
+                    <button @click="showRestoreModal = true" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl font-medium text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                        </svg>
+                        <span class="hidden sm:inline">Restore</span>
                     </button>
                     <Link :href="route('tasks.create')" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-500 font-semibold rounded-xl transition-all shadow-sm hover:shadow-md">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
@@ -692,6 +754,96 @@ onUnmounted(() => {
                                     @click="submitImport"
                                 >
                                     {{ isImporting ? 'Importing...' : 'Import Tasks' }}
+                                </button>
+                            </div>
+                        </div>
+                    </Transition>
+                </div>
+            </Transition>
+        </Teleport>
+
+        <!-- Restore Backup Modal -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="ease-out duration-200"
+                enter-from-class="opacity-0"
+                enter-to-class="opacity-100"
+                leave-active-class="ease-in duration-150"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0"
+            >
+                <div v-if="showRestoreModal" class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden p-4 sm:p-0" role="dialog" aria-modal="true">
+                    <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" @click="closeRestoreModal"></div>
+                    <Transition
+                        enter-active-class="ease-out duration-200"
+                        enter-from-class="opacity-0 scale-95 translate-y-4"
+                        enter-to-class="opacity-100 scale-100 translate-y-0"
+                        leave-active-class="ease-in duration-150"
+                        leave-from-class="opacity-100 scale-100 translate-y-0"
+                        leave-to-class="opacity-0 scale-95 translate-y-4"
+                    >
+                        <div v-if="showRestoreModal" class="relative w-full max-w-lg transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all sm:my-8 border border-gray-100 dark:border-gray-700">
+                            <div class="flex items-start gap-4">
+                                <div class="shrink-0 rounded-full p-2.5 flex items-center justify-center bg-amber-100 dark:bg-amber-900/30">
+                                    <svg class="h-6 w-6 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                                    </svg>
+                                </div>
+                                <div class="pt-0.5 w-full">
+                                    <h3 class="text-lg font-semibold leading-6 text-gray-900 dark:text-white">Restore from Backup</h3>
+                                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                        Upload a JSON backup file to restore your tasks, categories, and labels. This will add data to your account (not replace it).
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="mt-6">
+                                <div class="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center hover:border-amber-400 dark:hover:border-amber-500 transition-colors">
+                                    <input
+                                        type="file"
+                                        accept=".json"
+                                        class="hidden"
+                                        ref="restoreFileInput"
+                                        @change="handleRestoreFileSelect"
+                                    />
+                                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                                    </svg>
+                                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                        <button type="button" @click="restoreFileInput?.click()" class="font-semibold text-amber-600 hover:text-amber-500 dark:text-amber-400">
+                                            Click to select file
+                                        </button>
+                                        or drag and drop
+                                    </p>
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-500">JSON backup files only</p>
+                                    <p v-if="restoreFile" class="mt-3 text-sm text-amber-600 dark:text-amber-400 font-medium">
+                                        {{ restoreFile.name }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div v-if="restoreErrors.length > 0" class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                                <p class="text-sm font-medium text-red-800 dark:text-red-400">Restore Errors:</p>
+                                <ul class="mt-2 text-xs text-red-700 dark:text-red-300 list-disc list-inside">
+                                    <li v-for="(error, index) in restoreErrors" :key="index">{{ error }}</li>
+                                </ul>
+                            </div>
+
+                            <div class="mt-6 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    class="inline-flex justify-center rounded-xl bg-white dark:bg-gray-800 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                                    @click="closeRestoreModal"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    class="inline-flex justify-center rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-amber-500 transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    :disabled="!restoreFile || isRestoring"
+                                    @click="submitRestore"
+                                >
+                                    {{ isRestoring ? 'Restoring...' : 'Restore Backup' }}
                                 </button>
                             </div>
                         </div>
