@@ -67,15 +67,15 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
+      - name: Build assets
+        run: npm run build
+
       - name: Run tests
         env:
           REDIS_HOST: 127.0.0.1
           CACHE_STORE: redis
           SESSION_DRIVER: redis
         run: php artisan test
-
-      - name: Build assets
-        run: npm run build
 
   code-quality:
     name: Code Quality
